@@ -13,6 +13,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/asb2m10/dexed.git
     GIT_TAG ${DEXED_COMMIT}
     GIT_SHALLOW FALSE
+    GIT_SUBMODULES ""
 )
 FetchContent_GetProperties(dexed)
 if(NOT dexed_POPULATED)
