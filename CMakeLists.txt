@@ -21,6 +21,7 @@ if(NOT dexed_POPULATED)
 endif()
 
 add_library(dexed_msfa STATIC
+    ${dexed_SOURCE_DIR}/Source/msfa/env.cc
     ${dexed_SOURCE_DIR}/Source/msfa/exp2.cc
     ${dexed_SOURCE_DIR}/Source/msfa/fm_core.cc
     ${dexed_SOURCE_DIR}/Source/msfa/fm_op_kernel.cc
@@ -33,8 +34,9 @@ target_include_directories(dexed_msfa PUBLIC
 )
 
 add_executable(webxed
-    src/wasm/WasmBridge.cpp
+    src/model/DxPatch.cpp
     src/synth/dx/DxEngine.cpp
+    src/wasm/WasmBridge.cpp
 )
 
 target_include_directories(webxed PRIVATE src)
