@@ -26,6 +26,8 @@ if(EMSCRIPTEN)
         "-sEXPORT_ES6=1"
         "-sENVIRONMENT=web"
         "-sALLOW_MEMORY_GROWTH=1"
+        "-sNO_EXIT_RUNTIME=1"
+        "-sEXPORTED_RUNTIME_METHODS=['cwrap']"
         "-sEXPORTED_FUNCTIONS=['_createSynth','_destroySynth','_noteOn','_noteOff','_renderSample']"
     )
 endif()
