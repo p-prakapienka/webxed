@@ -11,3 +11,13 @@ Primary workflow:
 5. Save the result for later recreation on hardware.
 
 The project intentionally prioritizes the conversion and A/B audition workflow over building a complete Dexed clone.
+
+## Source layout
+
+All application source lives under `src`:
+
+- `src/synth` — synthesis code.
+- `src/wasm` — WASM/native bridge.
+- `src/web` — browser source.
+
+Build output is generated outside the source tree under `build`.
