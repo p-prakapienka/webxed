@@ -5,12 +5,42 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(FetchContent)
+
+set(DEXED_COMMIT "2e182b3db85c09083ab13c8b9b00565ce7d9ff85")
+FetchContent_Declare(
+    dexed
+    GIT_REPOSITORY https://github.com/asb2m10/dexed.git
+    GIT_TAG ${DEXED_COMMIT}
+    GIT_SHALLOW FALSE
+    GIT_SUBMODULES ""
+)
+FetchContent_GetProperties(dexed)
+if(NOT dexed_POPULATED)
+    FetchContent_Populate(dexed)
+endif()
+
+add_library(dexed_msfa STATIC
+    ${dexed_SOURCE_DIR}/Source/msfa/env.cc
+    ${dexed_SOURCE_DIR}/Source/msfa/exp2.cc
+    ${dexed_SOURCE_DIR}/Source/msfa/fm_core.cc
+    ${dexed_SOURCE_DIR}/Source/msfa/fm_op_kernel.cc
+    ${dexed_SOURCE_DIR}/Source/msfa/sin.cc
+)
+
+target_include_directories(dexed_msfa PUBLIC
+    ${dexed_SOURCE_DIR}/Source
+    ${dexed_SOURCE_DIR}/Source/msfa
+)
+
 add_executable(webxed
+    src/model/DxPatch.cpp
+    src/synth/dx/DxEngine.cpp
     src/wasm/WasmBridge.cpp
-    src/synth/FmVoice.cpp
 )
 
 target_include_directories(webxed PRIVATE src)
+target_link_libraries(webxed PRIVATE dexed_msfa)
 target_compile_options(webxed PRIVATE -Wall -Wextra -Wpedantic)
 
 if(EMSCRIPTEN)

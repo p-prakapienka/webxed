@@ -1,28 +1,28 @@
-#include "synth/FmVoice.h"
+#include "synth/dx/DxEngine.h"
 
 extern "C" {
 
-FmVoice* createSynth(double sampleRate) {
-    return new FmVoice(sampleRate);
+DxEngine* createSynth(double sampleRate) {
+    return new DxEngine(sampleRate);
 }
 
-void destroySynth(FmVoice* synth) {
+void destroySynth(DxEngine* synth) {
     delete synth;
 }
 
-void noteOn(FmVoice* synth, int midiNote, double velocity) {
+void noteOn(DxEngine* synth, int midiNote, double velocity) {
     if (synth != nullptr) {
         synth->noteOn(midiNote, velocity);
     }
 }
 
-void noteOff(FmVoice* synth) {
+void noteOff(DxEngine* synth) {
     if (synth != nullptr) {
         synth->noteOff();
     }
 }
 
-double renderSample(FmVoice* synth) {
+double renderSample(DxEngine* synth) {
     return synth != nullptr ? synth->renderSample() : 0.0;
 }
 
