@@ -9,6 +9,14 @@ const std::array<uint8_t, DxPatch::size>& DxPatch::data() const {
     return values;
 }
 
+std::string DxPatch::name() const {
+    std::string result(values.begin() + 145, values.begin() + 155);
+    while (!result.empty() && result.back() == ' ') {
+        result.pop_back();
+    }
+    return result;
+}
+
 DxPatch DxPatch::initVoice() {
     std::array<uint8_t, size> patch{};
 
@@ -47,7 +55,7 @@ DxPatch DxPatch::initVoice() {
         patch[index] = 50;
     }
 
-    patch[134] = 31; // DX algorithm 32: six parallel carriers.
+    patch[134] = 31;
     patch[135] = 0;
     patch[136] = 1;
     patch[144] = 24;
