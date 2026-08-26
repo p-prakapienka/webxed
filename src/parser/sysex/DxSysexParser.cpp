@@ -1,5 +1,6 @@
 #include "parser/sysex/DxSysexParser.h"
 
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 
