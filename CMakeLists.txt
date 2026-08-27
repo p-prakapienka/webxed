@@ -44,6 +44,9 @@ add_library(webxed_digitone STATIC
     src/model/digitone/DigitoneEnvelope.cpp
     src/model/digitone/DigitonePatch.cpp
     src/serialization/digitone/DigitonePatchSerializer.cpp
+    src/synth/digitone/DigitoneEnvelopeState.cpp
+    src/synth/digitone/DigitoneOperator.cpp
+    src/synth/digitone/DigitoneEngine.cpp
 )
 target_include_directories(webxed_digitone PUBLIC src)
 target_link_libraries(webxed_digitone PUBLIC nlohmann_json::nlohmann_json)
@@ -66,6 +69,7 @@ include(CTest)
 if(BUILD_TESTING AND NOT EMSCRIPTEN)
     add_executable(webxed_tests
         tests/model/digitone/DigitonePatchTest.cpp
+        tests/synth/digitone/DigitoneEngineTest.cpp
     )
     target_link_libraries(webxed_tests PRIVATE webxed_digitone)
     target_compile_options(webxed_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -95,6 +99,6 @@ if(EMSCRIPTEN)
         "-sALLOW_MEMORY_GROWTH=1"
         "-sNO_EXIT_RUNTIME=1"
         "-sEXPORTED_RUNTIME_METHODS=['cwrap']"
-        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_noteOn','_noteOff','_renderSample']"
+        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_selectPreviewEngine','_noteOn','_noteOff','_renderSample']"
     )
 endif()
