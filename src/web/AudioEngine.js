@@ -15,6 +15,13 @@ export class AudioEngine {
         this.processor.connect(audioContext.destination);
     }
 
+    selectPreviewEngine(engineIndex) {
+        if (this.noteActive) {
+            this.noteOff();
+        }
+        return this.api.selectPreviewEngine(this.session, engineIndex);
+    }
+
     noteOn(midiNote = 69, velocity = 0.8) {
         if (this.noteActive) {
             return;
