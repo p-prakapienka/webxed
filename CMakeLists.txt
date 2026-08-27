@@ -37,6 +37,7 @@ add_executable(webxed
     src/model/DxPatch.cpp
     src/parser/sysex/DxSysexParser.cpp
     src/synth/dx/DxEngine.cpp
+    src/wasm/WebxedSession.cpp
     src/wasm/WasmBridge.cpp
 )
 
@@ -49,6 +50,10 @@ if(EMSCRIPTEN)
     file(MAKE_DIRECTORY "${WEB_OUTPUT_DIR}")
     configure_file(src/web/index.html "${WEB_OUTPUT_DIR}/index.html" COPYONLY)
     configure_file(src/web/app.js "${WEB_OUTPUT_DIR}/app.js" COPYONLY)
+    configure_file(src/web/AudioEngine.js "${WEB_OUTPUT_DIR}/AudioEngine.js" COPYONLY)
+    configure_file(src/web/PatchBrowser.js "${WEB_OUTPUT_DIR}/PatchBrowser.js" COPYONLY)
+    configure_file(src/web/SysexLoader.js "${WEB_OUTPUT_DIR}/SysexLoader.js" COPYONLY)
+    configure_file(src/web/WebxedApi.js "${WEB_OUTPUT_DIR}/WebxedApi.js" COPYONLY)
 
     set_target_properties(webxed PROPERTIES
         OUTPUT_NAME "webxed"
