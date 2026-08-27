@@ -6,6 +6,17 @@ on:
   pull_request:
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build tests
+        run: cmake --build build --target webxed_tests --config Release
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
   build:
     runs-on: ubuntu-latest
     steps:
