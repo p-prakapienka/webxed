@@ -8,19 +8,20 @@
 <body>
     <main>
         <h1>Webxed</h1>
-        <p>Load a DX7 SysEx voice or 32-voice bank and audition it in the browser.</p>
+        <p>Audition DX7 SysEx patches and the hand-authored Digitone target voice in the browser.</p>
 
         <button id="startButton" type="button">Start audio</button>
         <input id="sysexInput" type="file" accept=".syx,application/octet-stream" disabled>
 
         <label for="patchSelect">Patch</label>
         <select id="patchSelect" disabled>
-            <option>WEBXEDINIT</option>
+            <option>WEBXED INIT</option>
         </select>
-
         <button id="previousButton" type="button" disabled>Previous</button>
         <button id="nextButton" type="button" disabled>Next</button>
-        <button id="noteButton" type="button" disabled>Play DX A4</button>
+
+        <button id="dxNoteButton" type="button" disabled>Play DX A4</button>
+        <button id="digitoneNoteButton" type="button" disabled>Play Digitone Init A4</button>
 
         <p id="status">Start audio to begin.</p>
     </main>
