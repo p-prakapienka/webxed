@@ -80,7 +80,7 @@ Delivered:
 - `WebxedSession` separated from the thin C ABI bridge.
 - Browser responsibilities split into dedicated objects such as `WebxedApi`, `AudioEngine`, `PatchBrowser`, and `SysexLoader`.
 
-## Milestone 4 — Digitone-compatible patch model ← NEXT
+## Milestone 4 — Digitone-compatible patch model ✅
 
 Create a target model that reflects Digitone hardware controls rather than convenient internal DSP values.
 
@@ -115,9 +115,15 @@ Rules:
 - Keep DSP-only implementation details inside `DigitoneEngine`.
 - Make the model serializable from the start.
 
-Deliverable: a serializable target patch model suitable for later conversion, editing, and persistence.
+Delivered:
 
-## Milestone 5 — Simplified four-operator Digitone engine
+- Encapsulated `DigitonePatch` and `DigitoneEnvelope` domain models.
+- Hardware-facing FM Tone parameters and ranges.
+- Separate A and B operator envelopes with attack, decay, end level, modulation level, delay, trigger mode, and reset behavior.
+- Versioned JSON serialization with format validation and round-trip support.
+- Native tests covering defaults, serialization, escaping, compatibility markers, and parameter validation.
+
+## Milestone 5 — Simplified four-operator Digitone engine ← NEXT
 
 Implement a browser-preview engine that approximates Digitone II FM Tone behaviour.
 
@@ -383,6 +389,7 @@ Do not prioritise these before the DX → Digitone A/B workflow is solid:
 - Milestone 1: complete.
 - Milestone 2: complete.
 - Milestone 3: complete.
-- Milestone 4: next.
+- Milestone 4: complete.
+- Milestone 5: next.
 
 The highest-value near-term goal remains reaching Milestone 7: browse a real DX bank, preview the source, convert it, preview the Digitone approximation, tweak it, and save it.

@@ -17,6 +17,9 @@ The project intentionally prioritizes the conversion and A/B audition workflow o
 All application source lives under `src`:
 
 - `src/synth` — synthesis code.
+- `src/model` — source and target patch domain models.
+- `src/parser` — source format parsers.
+- `src/serialization` — versioned Webxed format serializers.
 - `src/wasm` — WASM/native bridge.
 - `src/web` — browser source.
 

@@ -7,6 +7,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
 
+FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 set(DEXED_COMMIT "2e182b3db85c09083ab13c8b9b00565ce7d9ff85")
 FetchContent_Declare(
     dexed
@@ -33,6 +40,15 @@ target_include_directories(dexed_msfa PUBLIC
     ${dexed_SOURCE_DIR}/Source/msfa
 )
 
+add_library(webxed_digitone STATIC
+    src/model/digitone/DigitoneEnvelope.cpp
+    src/model/digitone/DigitonePatch.cpp
+    src/serialization/digitone/DigitonePatchSerializer.cpp
+)
+target_include_directories(webxed_digitone PUBLIC src)
+target_link_libraries(webxed_digitone PUBLIC nlohmann_json::nlohmann_json)
+target_compile_options(webxed_digitone PRIVATE -Wall -Wextra -Wpedantic)
+
 add_executable(webxed
     src/model/DxPatch.cpp
     src/parser/sysex/DxSysexParser.cpp
@@ -42,8 +58,19 @@ add_executable(webxed
 )
 
 target_include_directories(webxed PRIVATE src)
-target_link_libraries(webxed PRIVATE dexed_msfa)
+target_link_libraries(webxed PRIVATE dexed_msfa webxed_digitone)
 target_compile_options(webxed PRIVATE -Wall -Wextra -Wpedantic)
+
+include(CTest)
+
+if(BUILD_TESTING AND NOT EMSCRIPTEN)
+    add_executable(webxed_tests
+        tests/model/digitone/DigitonePatchTest.cpp
+    )
+    target_link_libraries(webxed_tests PRIVATE webxed_digitone)
+    target_compile_options(webxed_tests PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME webxed_tests COMMAND webxed_tests)
+endif()
 
 if(EMSCRIPTEN)
     set(WEB_OUTPUT_DIR "${CMAKE_BINARY_DIR}/web")
