@@ -31,6 +31,10 @@ int selectPatch(WebxedSession* session, int index) {
     return session != nullptr && session->selectPatch(index) ? 1 : 0;
 }
 
+int selectPreviewEngine(WebxedSession* session, int engineIndex) {
+    return session != nullptr && session->selectPreviewEngine(engineIndex) ? 1 : 0;
+}
+
 void noteOn(WebxedSession* session, int midiNote, double velocity) {
     if (session != nullptr) {
         session->noteOn(midiNote, velocity);
