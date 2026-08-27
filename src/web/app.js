@@ -1,52 +1,74 @@
 import createWebxedModule from './webxed.js';
+import { AudioEngine } from './AudioEngine.js';
+import { PatchBrowser } from './PatchBrowser.js';
+import { SysexLoader } from './SysexLoader.js';
+import { WebxedApi } from './WebxedApi.js';
 
 const startButton = document.getElementById('startButton');
+const sysexInput = document.getElementById('sysexInput');
+const patchSelect = document.getElementById('patchSelect');
+const previousButton = document.getElementById('previousButton');
+const nextButton = document.getElementById('nextButton');
 const noteButton = document.getElementById('noteButton');
+const status = document.getElementById('status');
 
-let audioContext;
-let processor;
-let module;
-let synth;
-let noteActive = false;
+let audioEngine;
+let patchBrowser;
+let sysexLoader;
 
 startButton.addEventListener('click', async () => {
-    if (audioContext) {
+    if (audioEngine) {
         return;
     }
 
-    audioContext = new AudioContext();
-    module = await createWebxedModule();
+    const audioContext = new AudioContext();
+    const module = await createWebxedModule();
+    const api = new WebxedApi(module);
+    const session = api.createSession(audioContext.sampleRate);
 
-    const createSynth = module.cwrap('createSynth', 'number', ['number']);
-    const noteOn = module.cwrap('noteOn', null, ['number', 'number', 'number']);
-    const noteOff = module.cwrap('noteOff', null, ['number']);
-    const renderSample = module.cwrap('renderSample', 'number', ['number']);
+    audioEngine = new AudioEngine(api, session, audioContext);
+    patchBrowser = new PatchBrowser(api, session, patchSelect, previousButton, nextButton, status);
+    sysexLoader = new SysexLoader(api, session, patchBrowser, status);
 
-    synth = createSynth(audioContext.sampleRate);
-    processor = audioContext.createScriptProcessor(512, 0, 1);
-    processor.onaudioprocess = event => {
-        const output = event.outputBuffer.getChannelData(0);
-        for (let index = 0; index < output.length; index += 1) {
-            output[index] = renderSample(synth);
-        }
-    };
-    processor.connect(audioContext.destination);
-
-    noteButton.addEventListener('pointerdown', () => {
-        noteOn(synth, 69, 0.8);
-        noteActive = true;
-    });
-
-    const stopNote = () => {
-        if (noteActive) {
-            noteOff(synth);
-            noteActive = false;
-        }
-    };
-
-    noteButton.addEventListener('pointerup', stopNote);
-    noteButton.addEventListener('pointerleave', stopNote);
-
+    sysexInput.disabled = false;
     noteButton.disabled = false;
     startButton.disabled = true;
+    status.textContent = 'Audio ready. Load a .syx file or audition the init voice.';
+    patchBrowser.refreshNavigation();
+});
+
+sysexInput.addEventListener('change', async event => {
+    const [file] = event.target.files;
+    if (file && sysexLoader) {
+        await sysexLoader.load(file);
+    }
+});
+
+patchSelect.addEventListener('change', () => patchBrowser?.select(patchSelect.selectedIndex));
+previousButton.addEventListener('click', () => patchBrowser?.previous());
+nextButton.addEventListener('click', () => patchBrowser?.next());
+
+noteButton.addEventListener('pointerdown', () => audioEngine?.noteOn());
+noteButton.addEventListener('pointerup', () => audioEngine?.noteOff());
+noteButton.addEventListener('pointerleave', () => audioEngine?.noteOff());
+
+window.addEventListener('keydown', event => {
+    if (event.target === patchSelect || event.target === sysexInput) {
+        return;
+    }
+
+    if (event.key === 'ArrowLeft') {
+        patchBrowser?.previous();
+    } else if (event.key === 'ArrowRight') {
+        patchBrowser?.next();
+    } else if (event.code === 'Space' && !event.repeat) {
+        event.preventDefault();
+        audioEngine?.noteOn();
+    }
+});
+
+window.addEventListener('keyup', event => {
+    if (event.code === 'Space') {
+        audioEngine?.noteOff();
+    }
 });

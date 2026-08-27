@@ -35,7 +35,9 @@ target_include_directories(dexed_msfa PUBLIC
 
 add_executable(webxed
     src/model/DxPatch.cpp
+    src/parser/sysex/DxSysexParser.cpp
     src/synth/dx/DxEngine.cpp
+    src/wasm/WebxedSession.cpp
     src/wasm/WasmBridge.cpp
 )
 
@@ -48,6 +50,10 @@ if(EMSCRIPTEN)
     file(MAKE_DIRECTORY "${WEB_OUTPUT_DIR}")
     configure_file(src/web/index.html "${WEB_OUTPUT_DIR}/index.html" COPYONLY)
     configure_file(src/web/app.js "${WEB_OUTPUT_DIR}/app.js" COPYONLY)
+    configure_file(src/web/AudioEngine.js "${WEB_OUTPUT_DIR}/AudioEngine.js" COPYONLY)
+    configure_file(src/web/PatchBrowser.js "${WEB_OUTPUT_DIR}/PatchBrowser.js" COPYONLY)
+    configure_file(src/web/SysexLoader.js "${WEB_OUTPUT_DIR}/SysexLoader.js" COPYONLY)
+    configure_file(src/web/WebxedApi.js "${WEB_OUTPUT_DIR}/WebxedApi.js" COPYONLY)
 
     set_target_properties(webxed PROPERTIES
         OUTPUT_NAME "webxed"
@@ -62,6 +68,6 @@ if(EMSCRIPTEN)
         "-sALLOW_MEMORY_GROWTH=1"
         "-sNO_EXIT_RUNTIME=1"
         "-sEXPORTED_RUNTIME_METHODS=['cwrap']"
-        "-sEXPORTED_FUNCTIONS=['_createSynth','_destroySynth','_noteOn','_noteOff','_renderSample']"
+        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_noteOn','_noteOff','_renderSample']"
     )
 endif()
