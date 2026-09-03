@@ -1,8 +1,13 @@
 # Sample index
 
-79 exports from a Digitone II (firmware 1.10E). Each was made from the **FM INIT**
+93 exports from a Digitone II (firmware 1.10E). Each was made from the **FM INIT**
 patch with exactly one parameter changed, so any byte difference between two
 files is attributable.
+
+`H164`–`H177` were saved as `FM T0NE …` rather than `FM INIT …`. The name lives
+inside the compressed stream and shifts everything after it, so every `FM T0NE`
+batch was given names of the same length — which is what reduces each batch's
+diff to a single byte.
 
 The `Hnnn` prefix is the export sequence number, descending — it also appears in
 the payload at `0x18` as a save counter, which is how that byte was identified.
@@ -63,7 +68,7 @@ default, because it looks like structure.
 | `H238_FM_INIT_AD23` | op A decay 23 (default 32) |
 | `H239_FM_INIT_AD64` | op A decay 64 — also makes op B's default 32 visible |
 | `H240_FM_INIT_AD127` | op A decay 127 |
-| `H213_FM_INIT_BD000` | op B decay 0 |
+| `H213_FM_INIT_BD000` | op B decay 0 — the only sample of this value, and also the save at which phase reset was switched off and left off, so a weak witness |
 | `H212_FM_INIT_BD064` | op B decay 64 |
 | `H211_FM_INIT_BD127` | op B decay 127 |
 | `H237_FM_INIT_AE00` | op A end 0 (default 127) — separates "zero" from "default" |
@@ -72,6 +77,119 @@ default, because it looks like structure.
 | `H208_FM_INIT_BE000` | op B end 0 |
 | `H209_FM_INIT_BE046` | op B end 46 |
 | `H210_FM_INIT_BE064` | op B end 64 — absorbed |
+
+## Page 3 — delays (0–127, default 0)
+
+| file | change |
+|---|---|
+| `H175_FM_T0NE_ADL064` | op A delay 64 |
+| `H176_FM_T0NE_ADL081` | op A delay 81 |
+| `H177_FM_T0NE_ADL127` | op A delay 127 |
+| `H174_FM_T0NE_BDL014` | op B delay 14 |
+| `H173_FM_T0NE_BDL064` | op B delay 64 — absorbed, nothing literal |
+| `H172_FM_T0NE_BDL127` | op B delay 127 |
+
+Within each batch the files differ in exactly one payload byte (beyond name,
+save counter and checksum), which pinned both encodings without any inference:
+
+```
+init / B delay 64   08 00 11 01 18 ...
+A delay  64         08 00 31 40 00 01 48 ...
+A delay  81         08 00 31 51 00 01 48 ...
+A delay 127         08 00 31 7F 00 01 48 ...
+B delay  14         08 00 51 01 00 01 00 0E 06 ...
+B delay 127         08 00 53 01 00 01 00 7F 06 ...
+```
+
+Both delays live in one group introduced by `08 00` — present in all 93 files —
+with op A's value first in the payload and op B's fifth. `08 00 31` matches only
+the three op A files; `08 00 ?? 01 00 01 00` only the two readable op B files.
+With both delays absorbed the group collapses to `08 00 11 01`.
+
+`H173` (op B delay 64) is byte-identical to an init save in this region apart
+from one byte in the token that follows, so its value is not recoverable — the
+reader reports `?` for it rather than the 0 default. 64 is the value that gets
+absorbed on almost every parameter.
+
+H175 and H176 are byte-identical after the value byte; H177 diverges about 19
+bytes later and is a byte longer overall, because `0x7F` occurs elsewhere in the
+record and the compressor picked a different match once the value became `0x7F`.
+
+The op A batch also retracted an earlier reading: those three carry
+`10 00 02 08`, which had been taken to mean op B decay 0, while the device shows
+op B decay at its default 32 in all three. The op B delay batch then ruled out
+the two replacement theories as well — see the op B decay note in `README.md`.
+
+## Page 3 — trig and reset booleans (default on)
+
+| file | change |
+|---|---|
+| `H171_FM_T0NE_ATROFF` | op A trig off |
+| `H168_FM_T0NE_ARSOFF` | op A reset off |
+| `H170_FM_T0NE_BTROFF` | op B trig off |
+| `H169_FM_T0NE_BRSOFF` | op B reset off |
+
+The first non-numeric parameters in the set, and the first the pattern method
+cannot really decode. Each file produces a distinct page-3 group, so the
+booleans do live in the `08 00` group. Lined up from `08 00`:
+
+```
+all on (H173)  11 01 18 00 00 06 00 11     | 7F 60 ...
+op A trg off   00 18 00 00 04 00 31 01 00  | 7F 60 ...
+op B trg off   13 01 48 00 31 01 00        | 7F 60 ...
+op B rst off   11 01 48 00 00 04 00 11     | 7F 60 ...
+op A rst off   02 46 00 51 01 00 01 00     | 7F 60 ...
+```
+
+`op B rst` off differs from all-on in exactly two bytes (`18`→`48`, `06`→`04`)
+with no length change — and both of those bytes move for unrelated reasons
+elsewhere, so neither can be called the bit. The reader matches each boolean as
+a whole-group string from one file and labels it **provisional**; a second
+sample of any of them, or a file with two page-3 edits at once, is expected to
+break it.
+
+## Page 3 — phase reset (default "all")
+
+| file | change |
+|---|---|
+| `H167_FM_T0NE_PHRALL` | phrt "all" — the default. File is named `PHROFF`; the value is "all" |
+| `H166_FM_T0NE_PHR__C` | phrt "C" |
+| `H165_FM_T0NE_PHRA+B` | phrt "A+B" |
+| `H164_FM_T0NE_PHRA+B2` | phrt "A+B2". File is named `PHRA+B1`; the value is A+B2, and the name is 15 chars, not 14 |
+
+Phase reset is **not** in the `08 00` group — all four files are byte-identical
+there. It sits just before op A decay, after the `78 3F` anchor:
+
+```
+all (H167)     78 3F 22 00 00 3E 00 31 20 00 7F
+off (value 1)  78 3F 22 00 11 01 3E 00 31 20 00 7F
+C     (H166)   78 3F 22 00 11 02 3E ...
+A+B   (H165)   78 3F 22 00 11 03 3E ...
+A+B2  (H164)   78 3F 1F 00 11 04 3E ...
+```
+
+`H166` and `H165` differ from each other in exactly one payload byte, which is
+what pinned it. The enum is a contiguous index from zero: 0 all (zero-payload
+form), 1 off, 2 C, 3 A+B, 4 A+B2. Value 1 = off comes from the device; the other
+three are measured. `0 = all` is an inference — `H167` stores no payload rather
+than a literal `0x00`.
+
+### The `H213` break — solved
+
+Across all 93 files the phrt field partitions exactly: 49 files carry no field,
+40 carry value 1 (off), one each carries 2, 3 and 4. The 49 are every save before
+`H213`; the 40 are every save from `H213` (BD000) onward.
+
+So the unexplained "change of shape" at `H213` was phase reset being switched
+**off** and left off for 45 consecutive saves — which is why it tracked save
+order and no parameter. `H167` set it back to "all" and the field vanished.
+
+Every delay and boolean file therefore carries `phrt = off`: they were never
+quite init patches.
+
+`01 18` vs `01 48` was reported as a second marker of the same break. It is not:
+`H173` is post-break and carries `01 18`, `H169` carries `01 48`, `H172` carries
+neither. That byte is a local match choice.
 
 ## Ratios
 

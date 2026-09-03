@@ -4,7 +4,7 @@ A single-header C++17 reader for `.dn2pst` files (Elektron Digitone II sound
 presets, firmware 1.10E), plus the analysis notes that produced it.
 
 The format is undocumented. Everything here was derived by exporting patches
-that differ in exactly one parameter and diffing the bytes. **79 samples** are
+that differ in exactly one parameter and diffing the bytes. **93 samples** are
 included in `samples/` so the whole analysis is reproducible.
 
 ## Build
@@ -108,6 +108,88 @@ Fixed-point parameters share the 1/256 fraction and a display that **truncates**
 toward zero, but *not* the bias — harm's zero point is 63, detune's is 0. Each
 one needs its own bias pinned by a sample.
 
+### Page 3 is one group, introduced by `08 00`
+
+`08 00` precedes the page-3 delay data in all 93 files, and the byte after it
+grows with what the group carries:
+
+```
+both delays absorbed   08 00 11 01 18 ...              init, and B delay 64
+op A delay explicit    08 00 31 <A> 00 01 48 ...        64, 81, 127
+op B delay explicit    08 00 5? 01 00 01 00 <B> 06 ...  14, 127
+```
+
+Op A's value comes first in the payload, op B's is the fifth byte. High nibble
+of the header = payload byte count fits all five observed shapes (`0x11` → 1,
+`0x31` → 3, `0x51`/`0x53` → 5). Take that as a pattern that fits rather than a
+proven rule: a framing test over the body showed that almost any byte stream
+parses as "nibble length + payload", so the fit carries little independent
+weight. The header's low nibble differs between the two op B samples (`0x51`
+for 14, `0x53` for 127) and is not decoded.
+
+Op A delay's second payload byte is `0x00` in all three samples. It is probably
+a 1/256 fraction, as for harm and detune, but only whole numbers have been
+sampled, so the reader matches it as a literal zero rather than claiming a
+fraction.
+
+Because the group has a zero-length form, op A delay is one of the few
+parameters where "absent" and "present but zero" are actually distinguishable.
+
+### Phase reset, and the `H213` break
+
+Phase reset does **not** live in the `08 00` page-3 group — all four `phrt`
+files are byte-identical there. It sits just before op A decay, right after the
+`78 3F` detune/feedback anchor:
+
+```
+all (H167)     78 3F 22 00 00 3E 00 31 20 00 7F
+off (value 1)  78 3F 22 00 11 01 3E 00 31 20 00 7F
+C     (H166)   78 3F 22 00 11 02 3E ...
+A+B   (H165)   78 3F 22 00 11 03 3E ...
+A+B2  (H164)   78 3F 1F 00 11 04 3E ...
+```
+
+The field is `11 <value>` followed by `0x3E`, and "all" takes a zero-payload
+form. Across all 93 samples the partition is exact: 49 files carry no field, 40
+carry value 1 (off), and one each carries 2, 3 and 4. Nothing matches twice.
+
+**This closes the `H213` mystery.** The 49 fieldless files are every save
+*before* `H213`; the 40 carrying value 1 are every save from `H213` (BD000)
+onward. What was recorded here as an unexplained era marker (`11 01 3E` against
+`02 30 00 31`) was simply phase reset holding "off" — switched off at the BD000
+save and left off for 45 consecutive saves, which is why it tracked save
+order and no parameter. `H167` set it back to "all" and the field vanished
+again.
+
+Two consequences: the delay and boolean files all carry `phrt = off`, so they
+were never quite init patches; and the earlier localisation was right for the right
+reason — LZ matching propagates forward, the divergence sat immediately before
+op A decay, and that is exactly where this field is.
+
+The enum, with value 1 named from the device:
+
+| value | option |
+|---|---|
+| 0 | all — the default, stored as the zero-payload form |
+| 1 | off |
+| 2 | C |
+| 3 | A+B |
+| 4 | A+B2 |
+
+A contiguous index from zero — a plain C enum cast to an int, which is what four
+directly measured consecutive values say. Whether a fifth option exists above
+A+B2 is unknown; nothing in the samples bounds the range.
+
+**One inference, flagged:** `0 = all` is not measured. `H167` stores the
+*zero-payload* form, so the byte is absent rather than literally `0x00`. Reading
+"no payload" as 0 matches how op A delay behaves and fits an enum starting at
+zero, but seeing the literal would need a file with `phrt = all` and the field
+emitted explicitly — which, given how 64-style absorption works, may not exist.
+
+So the `H213` story reads: **phase reset was switched off** at the BD000 save and
+left off for 45 consecutive saves — through every ratio, envelope, mix, harm,
+detune, feedback, delay and boolean sample.
+
 ## What is not understood
 
 - **The match token's length field.** Seven known matches, and `02 00 41`
@@ -117,8 +199,45 @@ one needs its own bias pinned by a sample.
 - **The algorithm value.** Located (it shares a slot with op C ratio) but not
   decoded; it is not the algorithm number.
 - **Bit 0 of the packed op B ratio pair**, set in 2 of 8 samples.
-- **Page 3** — delay, trig/reset booleans, and the `phrt` enum. Untouched; the
-  only remaining unknown *shape*, since everything so far is a number.
+- **Where op B decay 0 is stored.** `10 00 02 08` was read as op B decay 0 on
+  the strength of `H213_FM_INIT_BD000`, its only sample. The three op A delay
+  files carry the same three bytes with op B decay at its default 32 — checked
+  on the hardware — so that reading is **retracted**. BD000's 0 is real but not
+  attributable to any byte, and the reader now reports `?` for it rather than
+  the default it would otherwise assume.
+
+  What `0x02`/`0x04` actually is remains open, but the op B delay samples ruled
+  out the two obvious readings:
+
+  | file | page-3 field | byte | op B decay |
+  |---|---|---|---|
+  | init | `11` + 1 byte | `04` | 32 |
+  | `H173` B delay 64 | `11` + 1 byte | `04` | 32 |
+  | `H174` B delay 14 | `51` + 5 bytes | `04` | 32 |
+  | `H172` B delay 127 | `53` + 5 bytes | `04` | 32 |
+  | `H175`–`H177` A delay | `31` + 3 bytes | `02` | 32 |
+  | `H213` B decay 0 | `11` + 1 byte | `02` | 0 |
+
+  | `H168`–`H171` booleans | varies, 7–11 bytes | `04` | 32 |
+  | `H164`–`H167` phrt | `11` + 1 byte | `04` | 32 |
+
+  It is **not** a page-3 group marker — the op B delay and all four boolean
+  files change page 3 and keep `04`. It is **not** simply "the page-3 field
+  grew" either, or the five-byte files would flip too; only the three-byte form
+  does. What is left is an exact but unexplained correlation: `0x02` shows up
+  when op A delay is stored explicitly, and in BD000. Twelve page-3 edits across
+  four shapes now agree on this, so it is well tested even though unexplained.
+- **The page-3 booleans, at byte level.** Both delays are decoded, and op A/B
+  trig and reset are *located* — each of `H168`–`H171` produces a distinct
+  page-3 group, so the booleans live in the `08 00` group. But every differing
+  byte is entangled with the match tokens around it. `op B rst` off differs from
+  all-on in exactly two bytes (`18`→`48`, `06`→`04`) with no length change, and
+  both of those bytes move for unrelated reasons elsewhere, so neither can be
+  called the bit. The reader matches each boolean as a whole-group string from a
+  single file and labels the reading **provisional** — that is the same shape of
+  evidence that produced the retracted op B decay reading.
+- **`phrt` value 1** — the option the patch sat on from `H213` to `H168`. Its
+  byte is decoded; only its name on the device is unknown.
 - **Filter, amp, FX and mod pages.** Not started. The signed and fixed-point
   rules above should carry over.
 
@@ -127,7 +246,7 @@ one needs its own bias pinned by a sample.
 ```
 dn2pst.hpp        the reader, and the full format notes as comments
 main.cpp          CLI
-samples/          79 .dn2pst files, one parameter changed at a time
+samples/          93 .dn2pst files, one parameter changed at a time
 SAMPLES.md        what each sample file holds
 SAMPLES_TODO.md   samples still worth capturing, in priority order
 baseline.txt      `dn2pst -t samples/*` output — regression baseline

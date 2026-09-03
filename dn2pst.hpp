@@ -83,7 +83,35 @@
 //       64           32       ... 40 00 7F 10 00 13 20 08 ... B's 32 is LITERAL
 //       32           64       ... 20 00 7F 10 00 13 40 08 ...
 //       32          127       ... 20 00 7F 10 00 13 7F 08 ...
-//       32            0       ... 20 00 7F 10 00 02 08 ...    no literal zero
+//       32            0       ... 20 00 7F 10 00 02 08 ...    RETRACTED
+//
+// THE LAST ROW IS WRONG. H175-H177 carry the same "10 00 02 08" and the device
+// shows op B decay at its default 32 in all three. 0x02 therefore does not
+// encode "op B decay 0"; the value 0 in BD000 is not attributable to any byte
+// yet. See the op_b_decay entry in the registry for what 0x02/0x04 probably
+// are instead (a match length) and for how to test it.
+//
+// Worth keeping in mind when reading the table above: BD000 is also the save
+// at which PHASE RESET was changed and left changed. Every save from H213
+// onward carries phrt = off (1); every earlier save has no phrt field at all.
+// That is what the "11 01 3E" / "02 30 00 31" era markers were - see the
+// phase_reset entry in the registry. So BD000 is a poor witness for anything,
+// being both the first file of the new phrt state and the only sample of op B
+// decay 0.
+//
+// The way that was localised is worth reusing. Sounds are device-wide on this
+// machine rather than per project, so a project switch could not account for
+// it. And LZ matching propagates forward only: a change at logical position P
+// can alter compressed output from P onward, not before it (bar a byte or two
+// of lazy-match lookahead). The divergence point sat immediately before
+// "00 31 20 00 7F" - op A decay 32.00, then op A end 127 - which put the
+// changed field EARLIER in the record than op A decay. phase_reset turned out
+// to be exactly there.
+//
+// CORRECTION on the way: "01 18" vs "01 48" was reported as a second marker of
+// the same break. It is not - H173 is a post-break file carrying "01 18", and
+// H169 carries "01 48" while H172 carries neither. That byte is a local match
+// choice.
 //
 // In init BOTH decays are 32, and op B's copy simply is not in the file — the
 // identical 0x20 a few bytes earlier (op A's) absorbs it into a match. Change op
@@ -699,14 +727,243 @@ inline const std::vector<ParamSpec>& registry() {
           127, "no entry -> end 127 (the init default)", {},
       },
       {
+          // RETRACTED FORM: "10 00 02 08" was read as op B decay 0 on the
+          // strength of BD000, the only sample with that value. H175-H177
+          // carry the same three bytes and the device shows op B decay at its
+          // default 32 in all three (checked on the hardware). So 0x02 does
+          // not mean "op B decay 0", and the form is gone rather than
+          // narrowed - a pattern that fits one sample and is contradicted by
+          // three is not evidence.
+          //
+          // What 0x02 and 0x04 are is still open, and the op B DELAY samples
+          // (H172-H174) narrowed it by killing two readings:
+          //
+          //   file        page-3 field   byte    op B decay
+          //   ---------   ------------   ----    ----------
+          //   init        11 + 1 byte    04      32
+          //   H173 BDL64  11 + 1 byte    04      32
+          //   H174 BDL14  51 + 5 bytes   04      32
+          //   H172 BDL127 53 + 5 bytes   04      32
+          //   H175-H177   31 + 3 bytes   02      32
+          //   H213 BD000  11 + 1 byte    02       0
+          //
+          // NOT a page-3 group marker: H172/H174 change page 3 and keep 0x04.
+          // NOT simply "the page-3 field got longer" either, or the 5-byte
+          // files would flip too - only the 3-byte form does. What survives is
+          // an exact but unexplained correlation: 0x02 appears when op A
+          // delay is stored explicitly, and in BD000. A plain match length
+          // could still do this if the copy is anchored differently in each
+          // case, but nothing here shows that.
           "op_b_decay", "Operator B decay",
           {{"10 00 13 (v) 08", std::nullopt,
             "literal after 10 00 13 (verified: 32 in AD064, 64, 127)"},
-           {"10 00 02 08", 0, "op B decay 0 (verified: BD000)"},
            {"10 00 04 08", 32, "op B decay 32, absorbed into a match "
                                "(verified: init and most files)"}},
-          {},
+          // BD000 is now undecodable rather than wrong: its 0 is real (the
+          // device was read) but nothing in the file can be attributed to it,
+          // so reporting the 32 default here would be a silent wrong answer.
+          {{"10 00 02 08 00 11", std::nullopt,
+            "op B decay 0 is known to be set in BD000, but 0x02 cannot be "
+            "attributed to it - H175-H177 have 0x02 with decay 32"}},
           32, "init default is 32", {},
+      },
+      {
+          // OP A DELAY (page 3) - verified by H175/H176/H177, which differ
+          // from each other in exactly ONE payload byte (plus name, save
+          // counter and checksum):
+          //
+          //   delay  64   ... 10 00 02 08 00 31 40 00 01 48 ...
+          //   delay  81   ... 10 00 02 08 00 31 51 00 01 48 ...
+          //   delay 127   ... 10 00 02 08 00 31 7F 00 01 48 ...
+          //
+          // "08 00 31" occurs in exactly those three files and nowhere in the
+          // other 82, so the anchor is unambiguous. The 0x31 is the same
+          // length-prefixed field header seen elsewhere (2 payload bytes);
+          // the second payload byte is 0x00 in all three samples. It is
+          // probably a 1/256 fraction, as for harm and detune, but a whole
+          // number is the only case sampled - so it is matched as a literal
+          // 0x00 and NOT reported as a fraction.
+          //
+          // With the value absent the field collapses to a zero-length header:
+          // "08 00 11 01" (59 of the 85 samples), which reads as 0 - the init
+          // default. Files with neither form fall through to the default.
+          //
+          // Side note on why 127 behaves differently downstream: H175 and H176
+          // are byte-identical after the value, but H177 diverges ~19 bytes
+          // later and is one byte longer overall. 0x7F occurs elsewhere in the
+          // record, so the compressor found a different match once the delay
+          // byte became 0x7F. Same parameter, same encoding, different
+          // downstream layout - the usual consequence of LZ matching.
+          "op_a_delay", "Operator A delay",
+          {{"08 00 31 (v) 00", std::nullopt,
+            "literal, 2-byte field (verified: 64, 81, 127)"},
+           {"08 00 11 01", 0, "zero-length field -> delay 0 (init default)"}},
+          {},
+          0, "init default is 0", {},
+      },
+      {
+          // OP B DELAY (page 3) - H172/H173/H174. Its value sits FIVE bytes
+          // into the page-3 field, not first as op A delay's does:
+          //
+          //   B delay  14   ... 08 00 51 01 00 01 00 0E 06 ...
+          //   B delay 127   ... 08 00 53 01 00 01 00 7F 06 ...
+          //   B delay  64   ... 08 00 11 01 18 00 00 06 ...   NOTHING LITERAL
+          //
+          // Compare the op A delay files, which use the same "08 00" marker:
+          //
+          //   A delay  64   ... 08 00 31 40 00 01 48 ...
+          //
+          // So "08 00" introduces one page-3 group holding both delays, and
+          // the header byte after it grows with what the group carries: 0x11
+          // with one payload byte when both delays are absorbed, 0x31 with
+          // three when op A's value is there, 0x51/0x53 with five when op B's
+          // is. High nibble = payload byte count fits all five observed
+          // shapes. Treat that as a pattern that fits rather than a proven
+          // rule: a framing test over the body showed that almost any byte
+          // stream parses as (nibble length + payload), so the fit carries
+          // little independent weight on its own.
+          //
+          // The header's low nibble differs between the two op B samples
+          // (0x51 for 14, 0x53 for 127) and is NOT decoded, hence the "??".
+          //
+          // 64 is absorbed here as it is nearly everywhere else, so H173 has
+          // no literal value at all - see the anomaly below.
+          "op_b_delay", "Operator B delay",
+          {{"08 00 ?? 01 00 01 00 (v)", std::nullopt,
+            "literal, 5th payload byte (verified: 14, 127)"}},
+          // H173 holds op B delay 64 (read off the device) and stores nothing
+          // that can be attributed to it: the only thing separating it from an
+          // init save in this region is one byte in the following token
+          // ("00 00 06" against init's "00 02 06"), which is a match choice,
+          // not a value. Reported as unknown rather than as the 0 default,
+          // which would be a silent wrong answer.
+          {{"11 01 18 00 00 06", std::nullopt,
+            "op B delay 64 is set but fully absorbed; the only differing byte "
+            "here is a match choice, not the value (H173)"}},
+          0, "init default is 0", {},
+      },
+      {
+          // PAGE 3 BOOLEANS - op A/B trig and reset, all "on" in init.
+          // H168-H171, one boolean off per file, 14-character names.
+          //
+          // These are the first NON-NUMERIC parameters in the set, and the
+          // first ones the pattern method cannot really decode. Each file
+          // produces a distinct page-3 group, so the booleans do live inside
+          // the "08 00" group - but every byte that differs is entangled with
+          // the match tokens around it, and with one sample per boolean there
+          // is no way to isolate the bit. Lined up from "08 00":
+          //
+          //   all on (H173)  11 01 18 00 00 06 00 11        | 7F 60 ...
+          //   op A trg off   00 18 00 00 04 00 31 01 00     | 7F 60 ...
+          //   op B trg off   13 01 48 00 31 01 00           | 7F 60 ...
+          //   op B rst off   11 01 48 00 00 04 00 11        | 7F 60 ...
+          //   op A rst off   02 46 00 51 01 00 01 00        | 7F 60 ...
+          //
+          // op B rst off differs from all-on in exactly two bytes (18 -> 48
+          // and 06 -> 04) with no length change - and both of those bytes are
+          // known to move for unrelated reasons elsewhere, so neither can be
+          // called the bit.
+          //
+          // PROVISIONAL, and deliberately so: each form below is the whole
+          // group, matched as one string, and rests on ONE file. That is
+          // exactly the shape of evidence that produced the retracted
+          // "10 00 02 08 = op B decay 0" reading. They are registered because
+          // a whole-group string is at least unique across all 89 samples
+          // (checked), but a second sample of any of these - or any file with
+          // two page-3 edits at once - is expected to break them.
+          "op_a_trg", "Operator A trig",
+          {{"08 00 00 18 00 00 04 00 31 01 00", 0,
+            "whole-group match, ONE sample (H171) - provisional"}},
+          {},
+          1, "init default is on", {{0, "off"}, {1, "on"}},
+      },
+      {
+          "op_a_rst", "Operator A reset",
+          {{"08 00 02 46 00 51 01 00 01 00", 0,
+            "whole-group match, ONE sample (H168) - provisional"}},
+          {},
+          1, "init default is on", {{0, "off"}, {1, "on"}},
+      },
+      {
+          "op_b_trg", "Operator B trig",
+          {{"08 00 13 01 48 00 31 01 00", 0,
+            "whole-group match, ONE sample (H170) - provisional"}},
+          {},
+          1, "init default is on", {{0, "off"}, {1, "on"}},
+      },
+      {
+          "op_b_rst", "Operator B reset",
+          {{"08 00 11 01 48 00 00 04 00 11", 0,
+            "whole-group match, ONE sample (H169) - provisional"}},
+          {},
+          1, "init default is on", {{0, "off"}, {1, "on"}},
+      },
+      {
+          // PHASE RESET (page 3) - and the answer to the H213 mystery.
+          //
+          // It does NOT live in the "08 00" page-3 group; all four phrt files
+          // are byte-identical there. It sits just before op A decay, in the
+          // slot right after the detune/feedback anchor "78 3F":
+          //
+          //   all (H167)     78 3F 22 00 00 3E 00 31 20 00 7F
+          //   value 1        78 3F 22 00 11 01 3E 00 31 20 00 7F
+          //   C     (H166)   78 3F 22 00 11 02 3E ...
+          //   A+B   (H165)   78 3F 22 00 11 03 3E ...
+          //   A+B2  (H164)   78 3F 1F 00 11 04 3E ...
+          //
+          // So the field is "11 <value>" with 0x3E after it, and "all" takes
+          // the zero-payload form. Across all 93 samples the partition is
+          // exact: 49 files carry no field at all, 40 carry value 1, and one
+          // each carries 2, 3 and 4. Nothing matches twice.
+          //
+          // THIS IS THE H213 BREAK. The 49 fieldless files are every save
+          // BEFORE H213; the 40 files carrying value 1 are every save from
+          // H213 (BD000) onward. What was earlier recorded as an unexplained
+          // "11 01 3E" era marker was simply phase reset holding value 1: it
+          // was changed at the BD000 save and left there for 45 consecutive
+          // saves, which is why it tracked save order and no parameter. H167
+          // set it back to "all" and the field went away again.
+          //
+          // Two consequences worth keeping in mind:
+          //   - the ADL, BDL and boolean files all carry phrt = off, so they
+          //     were never quite init patches;
+          //   - the earlier localisation was right for the right reason - LZ
+          //     matching propagates forward, the divergence sat immediately
+          //     before op A decay, and that is exactly where this field is.
+          //
+          // The enum, with value 1 named from the device:
+          //
+          //   0  all     default; stored as the zero-payload form
+          //   1  off     what the patch sat on from H213 to H168
+          //   2  C
+          //   3  A+B
+          //   4  A+B2
+          //
+          // A contiguous index from zero, i.e. a plain C enum cast to an int -
+          // which is what the byte values say, four of them measured directly
+          // and consecutive. Whether a fifth option exists above A+B2 is not
+          // known; nothing in the samples bounds the range.
+          //
+          // ONE INFERENCE, flagged: 0 = all is not measured. H167 (all) stores
+          // the ZERO-PAYLOAD form, so the byte is absent, not literally 0x00.
+          // Reading "no payload" as 0 matches how op A delay behaves and is
+          // the natural fit for an enum starting at zero, but a file with
+          // phrt = all and the field emitted explicitly would be needed to see
+          // the literal - and 64-style absorption suggests such a file may
+          // simply not exist.
+          //
+          // So the H213 story reads: phase reset was switched OFF at the BD000
+          // save and left off for 45 consecutive saves, through every ratio,
+          // envelope, mix, harm, detune, feedback, delay and boolean sample.
+          "phase_reset", "Phase reset (phrt)",
+          {{"11 (v) 3E", std::nullopt,
+            "1-byte field before 0x3E (verified: 1 = off, 2 = C, 3 = A+B, "
+            "4 = A+B2)"},
+           {"78 3F ?? 00 00 3E", 0,
+            "zero-payload form, read as 0 = all (verified: H167)"}},
+          {},
+          0, "init default is all; absent in every save before H213",
+          {{0, "all"}, {1, "off"}, {2, "C"}, {3, "A+B"}, {4, "A+B2"}},
       },
       {
           "op_b_end", "Operator B end level",
