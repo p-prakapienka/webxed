@@ -1,10 +1,10 @@
 # Sample index
 
-93 exports from a Digitone II (firmware 1.10E). Each was made from the **FM INIT**
+95 exports from a Digitone II (firmware 1.10E). Each was made from the **FM INIT**
 patch with exactly one parameter changed, so any byte difference between two
 files is attributable.
 
-`H164`–`H177` were saved as `FM T0NE …` rather than `FM INIT …`. The name lives
+`H162`–`H177` were saved as `FM T0NE …` rather than `FM INIT …`. The name lives
 inside the compressed stream and shifts everything after it, so every `FM T0NE`
 batch was given names of the same length — which is what reduces each batch's
 diff to a single byte.
@@ -22,7 +22,7 @@ PAGE 2   op A attack 0, decay 32, end 127, level 0
          op B attack 0, decay 32, end 127, level 0
 PAGE 3   op A delay 0, trig on, reset on | phase reset "all"
          op B delay 0, trig on, reset on
-PAGE 4   ratio offsets: op C/A/B1/B2 all 0.00 | key track: op A/B1/B2 all 0
+PAGE 4   ratio offsets: op C/A/B1/B2 all 0.00 | key track: op A/B1/B2 all 0 (range 0–127)
 ```
 
 Note `decay = 32` and `end = 127`. Assuming those were 0 cost a lot of time —
@@ -190,6 +190,35 @@ quite init patches.
 `01 18` vs `01 48` was reported as a second marker of the same break. It is not:
 `H173` is post-break and carries `01 18`, `H169` carries `01 48`, `H172` carries
 neither. That byte is a local match choice.
+
+## The maximal patches — the layout experiment
+
+| file | change |
+|---|---|
+| `H163_FM_T0NE_FILE1A` | every parameter off its default, values chosen to avoid runs |
+| `H162_FM_T0NE_FILE2A` | the same value *set*, shuffled between parameters |
+
+267 bytes each against ~237 for an init save. With nothing at its default the
+compressor finds far fewer matches, and the record lays itself out as plain
+literals. Because the two files carry the same values assigned differently,
+every field is confirmed twice and independently — see the field table in
+`README.md`.
+
+The headline results: **every field is 16 bits, `<integer> <fraction>`** with the
+fraction in 1/256 (integer parameters simply carry fraction 0); the parameter
+order is now known for 19 fields; the op B ratio packing formula is confirmed on
+a dense sample; and the **algorithm is stored as `alg − 1`**.
+
+Three things these two files did *not* settle: `0x7B` holds 64 in both and was
+set by neither; the flag bytes after each delay do not decompose into two
+booleans cleanly; and the ratio offsets are not `integer + n/256` — none of the
+expected bytes appear anywhere in either file.
+
+Note the reader reports `?` for every parameter in these two files. The pattern
+registry was derived entirely from sparse records, where a parameter's
+neighbours are matched away, and those patterns produce plausible nonsense
+against a laid-out record. The offsets are known; a reader for them is not
+written yet.
 
 ## Ratios
 

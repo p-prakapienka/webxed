@@ -59,6 +59,75 @@
 //   0x31  nothing set        0x51  attack set (+0x20)
 //   0x53  op A level set (+0x02) — so 0x20 and 0x02 look like presence bits.
 //
+// ---------------------------------------------------------------------------
+// THE RECORD LAYOUT, from the two "maximal" patches (H162, H163)
+// ---------------------------------------------------------------------------
+// Every earlier sample was one parameter away from init, so the record was
+// mostly matched and values kept vanishing. H163/H162 have NOTHING at its
+// default, with distinct values chosen to avoid runs - and the record lays
+// itself out. 267 bytes against ~237, and the parameters appear in order as
+// plain literals. The two files carry the same value SET shuffled between
+// parameters, so every field is confirmed twice, independently:
+//
+//   off    field                 H163      H162      H163 set     H162 set
+//   0x69   algorithm             06        03        7            4
+//   0x6B   op C ratio index      05        0A        3.00         8.00
+//   0x6D   op A ratio index      0A        04        2.75         1.25
+//   0x6F   op B pair, 2B BE      01 F8     00 D9     3.00/11.00   11.00/3.00
+//   0x71   harm    int, frac     4A 68     34 CB     +11.40       -10.20
+//   0x73   detune  int, frac     5E 3E     4E 28     94.24        78.15
+//   0x75   feedback              2A        26        42           38
+//   0x77   mix                   33        55        -13          +21
+//   0x79   phase reset           03        02        A+B          C
+//   0x7B   ??                    40        40        (not set)    (not set)
+//   0x7D   op A attack           17        2D        23           45
+//   0x7F   op A decay            19        2F        25           47
+//   0x81   op A end              1B        29        27           41
+//   0x83   op A level            1D        2B        29           43
+//   0x85   op B attack           1F        1B        31           27
+//   0x87   op B decay            24        1D        36           29
+//   0x89   op B end              26        17        38           23
+//   0x8B   op B level            29        19        41           25
+//   0x8D   op A delay            2B        24        43           36
+//   0x8E   flags (A trg/rst)     48        46        off/on       on/off
+//   0x91   op B delay            2C        1F        44           31
+//   0x92   flags (B trg/rst)     4C        4E        on/off       off/on
+//   0xA4   key track A/B1/B2     2D 2E 2F  (+1)      45/46/47     44/42/46
+//
+// EVERY FIELD IS 16 BITS: <integer> <fraction>, the fraction in 1/256. The run
+// at 0x75..0x8D reads "2A 00 33 00 03 00 40 00 17 00 19 00 ..." - integer
+// parameters simply carry fraction 0, and harm and detune are the same shape
+// with the fraction filled in (68 = 0.406, 3E = 0.242). That single rule
+// explains the "31 <v> 00" and "11 <v>" forms the pattern registry below
+// grew: they are this field with its neighbours matched away.
+//
+// The op B ratio pair is 16-bit BIG-ENDIAN in the same slot: 0x01F8 = 504,
+// 504 >> 1 = 252 = 19*13 + 5, i.e. b1 index 5 (3.00) and b2 index 13 (11.00).
+// H162 gives 0x00D9 = 217, 217 >> 1 = 108 = 19*5 + 13, the pair swapped.
+// Confirms the packing formula on a second, much denser sample.
+//
+// ALGORITHM: stored as alg - 1. 7 -> 06 and 4 -> 03. Two points, from files
+// dense enough for the field to be literal at a known offset; the older ALG
+// samples are too compressed there to confirm independently.
+//
+// CORRECTION to the "7-bit data, 8-bit markers" note below: H162 stores harm's
+// fraction as 0xCB (203) at 0x72, and 0xD1, 0xF1, 0xC5, 0xF8 all appear inside
+// the record area of these two files. Data bytes are NOT restricted to 7 bits.
+// The high-bit bytes listed as block markers are still constant across every
+// sample, so they are probably real markers, but "all data is 7-bit" is wrong.
+//
+// STILL OPEN after these two files:
+//   - 0x7B holds 64 in both files and was never set by either. A parameter at
+//     a default of 64, located but unidentified - not on FM tone pages 1-4.
+//   - the flag bytes at 0x8E and 0x92 sit immediately after each delay and
+//     change with trg/rst, but 0x48 vs 0x46 differs in three bits and 0x4C vs
+//     0x4E in one, so two booleans do not account for them cleanly. A patch
+//     with two flags changed at once is the test.
+//   - the ratio offsets are NOT integer + n/256: none of the expected bytes
+//     (0x33, 0x4D, 0x99, 0xC0) appear anywhere in either file. They must live
+//     in 0x9B..0xA4, between the op B delay flags and key track, where H162 is
+//     one byte longer than H163. Encoding unknown.
+//
 // OP A DECAY — always present, always literal. THE INIT DEFAULT IS 32, NOT 0.
 // The byte before the FIRST "00 7F" in the body holds it:
 //
@@ -1200,10 +1269,30 @@ struct ParamResult {
   }
 };
 
+// A record dense enough to be laid out literally carries "28 00 F1 16" where a
+// sparse one carries "28 00 <alg-ish>". In such a file the patterns below are
+// invalid: they were all derived from records where a parameter's neighbours
+// were matched away, and matching them against a laid-out record produces
+// plausible-looking nonsense. The field offsets for this case ARE known (see
+// THE RECORD LAYOUT at the top of this file, 19 fields confirmed twice by
+// H162/H163), but no reader has been written for them yet - so report unknown
+// rather than a wrong number.
+inline bool denseRecord(const Patch& patch) {
+  static const std::vector<Tok> marker = parsePattern("28 00 F1 16");
+  return !findAll(patch.body(), patch.bodySize(), marker).empty();
+}
+
 inline ParamResult decodeParam(const Patch& patch, const ParamSpec& spec) {
   ParamResult r;
   r.id = spec.id;
   r.label = spec.label;
+
+  if (denseRecord(patch)) {
+    r.status = Status::UnknownEncoding;
+    r.formNote = "record is laid out literally (28 00 F1 16); the sparse-file "
+                 "patterns do not apply - see THE RECORD LAYOUT in dn2pst.hpp";
+    return r;
+  }
 
   // 1. known-undecodable patterns win, so a bad reading is never reported.
   for (const Form& f : spec.anomalies) {

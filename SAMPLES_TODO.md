@@ -1,6 +1,6 @@
 # Samples still worth capturing
 
-In priority order. Everything listed here is something the current 93 samples
+In priority order. Everything listed here is something the current 95 samples
 cannot answer. Rules that make a sample usable:
 
 - start from **FM INIT**, change **one** parameter, save under a new name;
@@ -11,72 +11,32 @@ cannot answer. Rules that make a sample usable:
 
 ---
 
-## 1. Two "maximal" patches — the layout experiment
+## 1. Rework the reader around the known layout — no samples needed
 
-Everything so far has been one parameter away from init, so the record is mostly
-matched and values keep getting absorbed. A patch with **nothing** at its
-default has far fewer repeats to match against, so most values land as literals
-and the record's **field order** becomes readable — the one thing 93
-single-parameter samples still have not given up.
+`H162`/`H163` gave the field order and the `<integer> <fraction>` 16-bit shape,
+confirmed twice per field. The pattern registry is now understood to be a proxy
+for that layout: each `31 <v> 00` or `11 <v>` form is one 16-bit field with its
+neighbours matched away. The reader currently reports `?` for both maximal
+patches rather than guess, because the sparse-file patterns produce nonsense
+against a laid-out record.
 
-Sizing, from the existing set: one changed parameter adds a mean of +2 bytes and
-up to +7 (name-normalised). So ~26 changed parameters should take the payload
-from ~235 to roughly **300-380 bytes**, nearly all of it new literals.
+The work: read fields by offset from the `28 00 F1 16` anchor for dense records,
+keep the pattern registry for sparse ones, and reconcile the two. That is code,
+not samples.
 
-### Rules that make it work
+## 2. The three things the maximal patches did not settle
 
-- **No value at its default.** That is the whole point.
-- **Never 0**, and never 32, 64 or 127 — those are the values that vanish.
-- **No two neighbouring parameters equal.** Minimum match length is 4, so a
-  single repeated byte cannot form a match; *runs* and repeated multi-byte
-  sequences are the enemy. This is why all-off flags would be as bad as
-  all-on: init has all four flags on and its page-3 group is the shortest in
-  the whole set, that run being swallowed.
-- **Alternate the booleans** rather than setting them all one way.
-- **14-character names** on both files, so they diff against the FM T0NE set.
-- Values are drawn from the 73 byte values that never appear in an init record,
-  so every literal is instantly identifiable in a hex dump. That is for
-  readability, not compression - single bytes cannot match anyway.
+| save | what it decides |
+|---|---|
+| a third maximal patch with a *third* value assignment | whether the field offsets hold, or are an artefact of these two files |
+| the same patch with `op A trg` **and** `op B trg` flipped together | the flag bytes at `0x8E`/`0x92` — `0x48` vs `0x46` differs in three bits, so two booleans do not explain them |
+| one patch with **only** the four ratio offsets changed, everything else at init | isolates the offsets, which are **not** `integer + n/256` — none of `0x33`, `0x4D`, `0x99`, `0xC0` appears in either maximal patch |
 
-### Why two files rather than a zeroing sweep
+`0x7B` holds 64 in both maximal patches and was set by neither, so it is a
+parameter with a default of 64 that is not on FM tone pages 1-4. Worth watching
+for once the filter/amp/FX pages are sampled.
 
-Two maximal patches with the same value *set* shuffled between parameters beat
-~30 saves zeroing one parameter at a time: each literal carries a different
-value in each file, and the pairing identifies which parameter owns it. Then
-zero only whatever is still ambiguous.
-
-### The assignment
-
-| parameter | file 1 | file 2 |
-|---|---|---|
-| op A atk / dec / end / lvl | 23 / 25 / 27 / 29 | 45 / 47 / 41 / 43 |
-| op B atk / dec / end / lvl | 31 / 36 / 38 / 41 | 27 / 29 / 23 / 25 |
-| feedback / op A delay / op B delay | 42 / 43 / 44 | 38 / 36 / 31 |
-| key track A / B1 / B2 | 45 / 46 / 47 | 44 / 42 / 46 |
-| mix | -13 | +21 |
-| harm / detune | +11.40 / 94.24 | -10.20 / 78.15 |
-| alg / op C ratio / op A ratio | 7 / 3.00 / 2.75 | 4 / 8.00 / 1.25 |
-| op B1 / B2 ratio | 3.00 / 11.00 | 11.00 / 3.00 |
-| op A trg / rst | off / on | on / off |
-| op B trg / rst | on / off | off / on |
-| phrt | A+B | C |
-| ratio offsets C / A / B1 / B2 | +0.50 / +1.25 / -0.50 / +2.00 | -0.50 / +2.00 / +1.25 / +0.50 |
-
-Two things cannot be made collision-free: the booleans are 0/1 by nature, and
-the op B ratio pair is packed into one number, so its stored byte is not ours to
-choose.
-
-Free side effect: the negative ratio offsets pin the page-4 fixed-point biases,
-which otherwise need their own samples (see below).
-
-### What this will and will not give
-
-It gives field **order**, not addresses - positions still shift with anything
-upstream of them, which is why both names must be the same length. The
-structural framing bytes (`00`, the `11`/`31` field headers) still repeat, so
-some matches survive and some values will still be absorbed.
-
-## 2. A second sample of any page-3 boolean
+## 3. A second sample of any page-3 boolean
 
 `H168`-`H171` located op A/B trig and reset inside the `08 00` group, but each
 reading is a whole-group string from a single file - the same evidence shape
@@ -97,21 +57,25 @@ is not a page-3 marker. Twelve page-3 edits agree; no further test needed.
 zero); only whether a fifth option exists above A+B2 is unknown, and nothing
 depends on it.
 
-## 3. Page 4 — ratio offsets and key track
+## 4. Page 4 — key track, and the offsets the maximal patches miss
+
+The maximal patches cover the four ratio offsets and the three key tracks, so
+this section only matters if those come back absorbed.
 
 | save | change |
 |---|---|
-| op C ratio offset **+0.50** | fixed point, positive |
-| op C ratio offset **−0.50** | fixed point, negative — pins the bias |
-| op A ratio offset **+2.00** | second fixed-point parameter on the page |
-| op A key track **64** | plain 0–127? unverified |
+| op A key track **45** | plain 0–127 (range confirmed on the device) |
+| op C ratio offset **+0.500** | the exact 1/256 midpoint, if the encoder will land on it |
+| op C ratio offset **-0.402** | negative, to pin the bias independently |
 
-Why the negative one matters: harm and detune share the 1/256 fraction but *not*
-the bias (harm's zero point is 63, detune's is 0). Every new fixed-point
-parameter needs its own negative sample to pin its zero point — it cannot be
-inferred from the others.
+Ratio offsets run -1.000 to +0.999, so they never carry an integer part; treat
+their whole field as a fraction until a sample says otherwise.
 
-## 4. Filter, amp, FX and mod pages
+Why a negative sample matters for any new fixed-point parameter: harm and detune
+share the 1/256 fraction but *not* the bias (harm's zero point is 63, detune's
+is 0). Each one needs its own negative sample to pin its zero point.
+
+## 5. Filter, amp, FX and mod pages
 
 Not started. Same recipe: one parameter per save, and for anything that can go
 negative or shows decimals, include one negative and one fractional value.
@@ -125,9 +89,9 @@ negative or shows decimals, include one negative and one fractional value.
   name-based probes in `SAMPLES.md` rule out every simple layout. More names of
   the kind already collected will not help — this needs a different idea rather
   than more data.
-- **The algorithm value** — located (it shares a slot with op C ratio), but the
-  stored number is not the algorithm number. `H247`–`H249` cover algorithms 2, 4
-  and 8; a few more (3, 5, 16) would show whether it is a lookup or an offset, so
-  it is worth a batch if convenient.
+- **The algorithm value** — SOLVED by the maximal patches: stored as `alg - 1`
+  (7 -> `06`, 4 -> `03`). A third dense patch with a different algorithm would
+  make it three points instead of two.
 - **Bit 0 of the packed op B ratio pair**, set in 2 of the 8 `BR` samples with
-  no visible cause.
+  no visible cause - and set in `H163` (`0x01F8`) but not `H162` (`0x00D9`),
+  which swap the same two ratios. Still unexplained.

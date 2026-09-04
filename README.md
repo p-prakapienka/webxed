@@ -4,7 +4,7 @@ A single-header C++17 reader for `.dn2pst` files (Elektron Digitone II sound
 presets, firmware 1.10E), plus the analysis notes that produced it.
 
 The format is undocumented. Everything here was derived by exporting patches
-that differ in exactly one parameter and diffing the bytes. **93 samples** are
+that differ in exactly one parameter and diffing the bytes. **95 samples** are
 included in `samples/` so the whole analysis is reproducible.
 
 ## Build
@@ -60,9 +60,13 @@ is the patch name. The manifest carries `FormatVersion`, `FileType`,
       <trailer>                  crc32-like u32, seq+8, AA A1 DA AA
 ```
 
-The body follows MIDI's convention: data bytes are 7-bit, and single bytes with
-the high bit set act as block markers (`B1 B0 AC F3 FF FF … BA CE F0`, identical
-in every sample). All parameter growth lands in the one block after `B1`.
+Single bytes with the high bit set act as block markers (`B1 B0 AC F3 FF FF …
+BA CE F0`, identical in every sample), and all parameter growth lands in the one
+block after `B1`. An earlier note here claimed data bytes are 7-bit as in MIDI —
+**that is wrong**: the two maximal patches store `0xCB`, `0xD1`, `0xF1`, `0xC5`
+and `0xF8` inside the record area, `0xCB` being harm's fraction byte. The
+markers are still constant everywhere, so they are probably genuine markers, but
+data is not restricted to 7 bits.
 
 ### It is compressed
 
@@ -107,6 +111,12 @@ coarse table.
 Fixed-point parameters share the 1/256 fraction and a display that **truncates**
 toward zero, but *not* the bias — harm's zero point is 63, detune's is 0. Each
 one needs its own bias pinned by a sample.
+
+They also store **floor(value) plus a positive fraction**, not a signed
+magnitude. `harm = -4.70` is integer −5 (stored 58 = −5 + 63) with fraction
+75/256 = 0.293, giving −4.707, which truncates to −4.70 on the display. One
+consequence: no sample yet has a fraction ≥ 0.5, so it is still unknown how a
+fraction byte with its high bit set (≥ 0x80) is carried in a 7-bit stream.
 
 ### Page 3 is one group, introduced by `08 00`
 
@@ -190,15 +200,66 @@ So the `H213` story reads: **phase reset was switched off** at the BD000 save an
 left off for 45 consecutive saves — through every ratio, envelope, mix, harm,
 detune, feedback, delay and boolean sample.
 
+### The record layout
+
+The two "maximal" patches (`H162`, `H163`) — nothing at its default, values
+chosen to avoid runs — take the payload to 267 bytes from ~237 and lay the
+record out as plain literals. They carry the same value *set* shuffled between
+parameters, so every field below is confirmed twice, independently:
+
+| offset | field | H163 | H162 | H163 set | H162 set |
+|---|---|---|---|---|---|
+| `0x69` | algorithm | `06` | `03` | 7 | 4 |
+| `0x6B` | op C ratio index | `05` | `0A` | 3.00 | 8.00 |
+| `0x6D` | op A ratio index | `0A` | `04` | 2.75 | 1.25 |
+| `0x6F` | op B pair (2 B, BE) | `01 F8` | `00 D9` | 3.00/11.00 | 11.00/3.00 |
+| `0x71` | harm — int, frac | `4A 68` | `34 CB` | +11.40 | −10.20 |
+| `0x73` | detune — int, frac | `5E 3E` | `4E 28` | 94.24 | 78.15 |
+| `0x75` | feedback | `2A` | `26` | 42 | 38 |
+| `0x77` | mix | `33` | `55` | −13 | +21 |
+| `0x79` | phase reset | `03` | `02` | A+B | C |
+| `0x7B` | **??** | `40` | `40` | not set | not set |
+| `0x7D`…`0x83` | op A attack, decay, end, level | `17 19 1B 1D` | `2D 2F 29 2B` | 23/25/27/29 | 45/47/41/43 |
+| `0x85`…`0x8B` | op B attack, decay, end, level | `1F 24 26 29` | `1B 1D 17 19` | 31/36/38/41 | 27/29/23/25 |
+| `0x8D` | op A delay | `2B` | `24` | 43 | 36 |
+| `0x8E` | flags — op A trg/rst | `48` | `46` | off/on | on/off |
+| `0x91` | op B delay | `2C` | `1F` | 44 | 31 |
+| `0x92` | flags — op B trg/rst | `4C` | `4E` | on/off | off/on |
+| `0xA4` | key track A, B1, B2 | `2D 2E 2F` | `2C 2A 2E` (+1) | 45/46/47 | 44/42/46 |
+
+**Every field is 16 bits: `<integer> <fraction>`, the fraction in 1/256.** The
+run at `0x75`–`0x8D` reads `2A 00 33 00 03 00 40 00 17 00 19 00 …` — integer
+parameters carry fraction 0, and harm and detune are the same shape with the
+fraction filled in. That one rule explains the `31 <v> 00` and `11 <v>` forms
+the pattern registry grew: they are this field with its neighbours matched away.
+
+The op B ratio pair is 16-bit big-endian in one slot, confirming the packing
+formula on a much denser sample: `0x01F8` = 504, `504 >> 1` = 252 = 19·13 + 5 →
+b1 index 5 (3.00), b2 index 13 (11.00); `H162` gives `0x00D9` = 217 → 19·5 + 13,
+the pair swapped.
+
+**The algorithm is stored as `alg − 1`** (7 → `06`, 4 → `03`). Two points, from
+files dense enough for the field to be literal; the older `ALG` samples are too
+compressed there to confirm independently.
+
 ## What is not understood
 
 - **The match token's length field.** Seven known matches, and `02 00 41`
   encodes both a length-5 and a length-13 match — so the three token bytes
   cannot contain the length. Where it lives is open. The header at `0x2F` is the
   only thing that differs between those two files but is not a plain size.
-- **The algorithm value.** Located (it shares a slot with op C ratio) but not
-  decoded; it is not the algorithm number.
-- **Bit 0 of the packed op B ratio pair**, set in 2 of 8 samples.
+- **Bit 0 of the packed op B ratio pair**, set in 2 of 8 samples — and in `H163`
+  (`0x01F8`, even) but not `H162` (`0x00D9`, odd), so still unexplained.
+- **`0x7B`** holds 64 in both maximal patches and was set by neither. A
+  parameter sitting at a default of 64, located but unidentified — and not on
+  FM tone pages 1–4, since those are all accounted for.
+- **The two flag bytes** at `0x8E` and `0x92`, immediately after each delay.
+  They change with trg/rst, but `0x48` vs `0x46` differs in three bits and
+  `0x4C` vs `0x4E` in one, so two booleans do not account for them cleanly.
+- **The ratio offsets are not `integer + n/256`.** None of the expected bytes
+  (`0x33`, `0x4D`, `0x99`, `0xC0`) appear anywhere in either maximal patch. They
+  must live in `0x9B`–`0xA4`, between the op B delay flags and key track, where
+  `H162` is one byte longer than `H163`. Encoding unknown.
 - **Where op B decay 0 is stored.** `10 00 02 08` was read as op B decay 0 on
   the strength of `H213_FM_INIT_BD000`, its only sample. The three op A delay
   files carry the same three bytes with op B decay at its default 32 — checked
@@ -246,7 +307,7 @@ detune, feedback, delay and boolean sample.
 ```
 dn2pst.hpp        the reader, and the full format notes as comments
 main.cpp          CLI
-samples/          93 .dn2pst files, one parameter changed at a time
+samples/          95 .dn2pst files, one parameter changed at a time
 SAMPLES.md        what each sample file holds
 SAMPLES_TODO.md   samples still worth capturing, in priority order
 baseline.txt      `dn2pst -t samples/*` output — regression baseline
