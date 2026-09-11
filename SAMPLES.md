@@ -211,8 +211,11 @@ a dense sample; and the **algorithm is stored as `alg − 1`**.
 
 Three things these two files did *not* settle: `0x7B` holds 64 in both and was
 set by neither; the flag bytes after each delay do not decompose into two
-booleans cleanly; and the ratio offsets are not `integer + n/256` — none of the
-expected bytes appear anywhere in either file.
+booleans cleanly; and the ratio offsets are not where an `integer + n/256`
+encoding would put them. The values are confirmed from the device screen
+(`H163` C +.199 A +.301 B1 −.402 B2 +.750; `H162` C −.199 A +.750 B1 +.301
+B2 −.402), and `.301` is not representable in 1/256 at all — so these use a
+finer resolution than every other parameter.
 
 Note the reader reports `?` for every parameter in these two files. The pattern
 registry was derived entirely from sparse records, where a parameter's
@@ -301,3 +304,26 @@ model built on that assumption. Minimum match length is 4, confirmed by
 
 Together these probes are exhausted: seven data points contradict every simple
 layout. Further progress needs known plaintext inside the body, not the name.
+
+
+### Why these seven probes could never pin the length
+
+Every one of them is a **pure periodic repeat**:
+
+| name | literals + token | dist | bytes copied |
+|---|---|---|---|
+| `FM INIT XYZQW` | 13 literals, no token | — | — |
+| `FM INIT AAAAB` | fully literal, no token | — | — |
+| `FM INIT AAAAA` | `41` + `01 00` | 1 | 4 |
+| `FM INIT AAAAAAA` | `41` + `01 00` | 1 | 6 |
+| `FM INIT ABABAB` | `41 42` + `02 00` | 2 | 4 |
+| `AAAAAAAAAAAAAAA` | `41` + `01 00` | 1 | 14 |
+| `ABABABABABABABA` | `41 42` + `02 00` | 2 | 13 |
+
+In every case `dist` equals the number of literals and the copy runs to the end
+of the string. So "copy N bytes" and "copy until the pattern is exhausted"
+produce the same output, and no probe of this shape can tell them apart. That,
+not a subtle token layout, is why seven data points never yielded a length.
+
+What is needed is a name where a match is followed by **more literals** — see
+`SAMPLES_TODO.md`.

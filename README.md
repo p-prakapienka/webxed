@@ -256,10 +256,24 @@ compressed there to confirm independently.
 - **The two flag bytes** at `0x8E` and `0x92`, immediately after each delay.
   They change with trg/rst, but `0x48` vs `0x46` differs in three bits and
   `0x4C` vs `0x4E` in one, so two booleans do not account for them cleanly.
-- **The ratio offsets are not `integer + n/256`.** None of the expected bytes
-  (`0x33`, `0x4D`, `0x99`, `0xC0`) appear anywhere in either maximal patch. They
-  must live in `0x9B`–`0xA4`, between the op B delay flags and key track, where
-  `H162` is one byte longer than `H163`. Encoding unknown.
+- **The ratio offsets.** The values are now confirmed from the device screen:
+  `H163` = C +.199, A +.301, B1 −.402, B2 +.750; `H162` = C −.199, A +.750,
+  B1 +.301, B2 −.402. So the search targets are known, not assumed, and the
+  conclusion stands: they are **not** `integer + n/256`, and no single scale
+  factor (×100 … ×32768, as u8/u16 LE/BE, signed or magnitude) puts all four in
+  a contiguous run anywhere in either file.
+
+  A hard constraint falls out of the displayed values. `.301` is **not
+  representable in 1/256** — 77/256 = .300 and 78/256 = .304 — so the ratio
+  offsets use a *finer* resolution than every other parameter in the record.
+  ×4096 fits all four if the display rounds (815, 1233, −1647, 3072); ×1000
+  fits exactly but appears nowhere in either file.
+
+  They should sit in `0x9B`–`0xA4`, between the op B delay flags and key track,
+  where `H162` is one byte longer. That region shares no two-byte sequence
+  between the files even though both carry `+.301`, `+.750` and `−.402` in
+  different slots — which is what a *compressed* region looks like, not a
+  laid-out one. Likely blocked on the decompressor rather than on samples.
 - **Where op B decay 0 is stored.** `10 00 02 08` was read as op B decay 0 on
   the strength of `H213_FM_INIT_BD000`, its only sample. The three op A delay
   files carry the same three bytes with op B decay at its default 32 — checked

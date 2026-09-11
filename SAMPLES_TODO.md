@@ -84,11 +84,26 @@ negative or shows decimals, include one negative and one fractional value.
 
 ## Open, but not waiting on samples
 
-- **The match token's length field.** `02 00 41` encodes both a length-5 and a
-  length-13 match, so the three token bytes cannot hold the length. The seven
-  name-based probes in `SAMPLES.md` rule out every simple layout. More names of
-  the kind already collected will not help — this needs a different idea rather
-  than more data.
+- **The match token's length field** — and now we know *why* seven probes never
+  cracked it. Every test name collected so far is a **pure periodic repeat**
+  (`AAAAA`, `ABABAB`, `AAAAAAAAAAAAAAA`, `ABABABABABABABA`, …). In all of them
+  `dist` equals the number of literals and the copy runs to the end of the
+  string, so "copy N bytes" and "copy until the pattern is exhausted" produce
+  identical output. The probes are degenerate — they cannot distinguish the two,
+  which is exactly the distinction we need.
+
+  The fix is a name where a match is followed by **more literals**, forcing the
+  copy to stop early and the length to be explicit. Four 14-character names:
+
+  | name | shape |
+  |---|---|
+  | `FM T0NE AAAAAB` | literal A, copy 4, literal B — the minimal case |
+  | `FM T0NE ABABAC` | literals A B, copy 3, literal C — same at dist 2 |
+  | `AAAAAAAAAAAAAB` | literal A, copy 12, literal B — a long copy, so a small length field would overflow visibly |
+  | `AAAAABBBBBCCCC` | three runs — shows whether tokens chain, and whether a match can start mid-string |
+
+  This is the cheapest high-value batch left: four saves, and the payload for a
+  name is only a few bytes, so each one is almost pure signal.
 - **The algorithm value** — SOLVED by the maximal patches: stored as `alg - 1`
   (7 -> `06`, 4 -> `03`). A third dense patch with a different algorithm would
   make it three points instead of two.

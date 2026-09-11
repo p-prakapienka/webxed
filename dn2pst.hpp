@@ -60,6 +60,137 @@
 //   0x53  op A level set (+0x02) — so 0x20 and 0x02 look like presence bits.
 //
 // ---------------------------------------------------------------------------
+// THE FIRMWARE IMAGE -- the parameter table, read directly
+// ---------------------------------------------------------------------------
+// Digitone II OS 1.10D .syx, run through mischa85/elektron-firmware-tool:
+// ELE3 container, 5 sections, every checksum and the HMAC-SHA256 trailer
+// verified [ok]. Section 3 "MAIN OS" depacks to 3,081,600 bytes, and it
+// contains the string "dn2pst" plus the complete UI parameter table.
+//
+// NOTE ON WHAT IS RECORDED HERE: only factual data structures - parameter
+// names, orders, value tables, format strings - as needed to read the file
+// format. The firmware image and the extracted sections are NOT part of this
+// repository and must not be committed to it.
+//
+// THE FM TONE PARAMETER TABLE, verbatim and in image order (long name, then
+// short label). This is Elektron's own list:
+//
+//   Algorithm ALGO | Ratio C RTOC | Ratio A RTOA | Ratio B RTOB
+//   Harmonics | (DTUN) | Feedback
+//   Ratio C Offset COFF | Ratio A Offset AOFF
+//   Ratio B1 Offset B1OF | Ratio B2 Offset B2OF
+//   A Env Attack ATKA | A Env Decay DECA | A Env End ENDA | A Level LEVA
+//   B Env Attack ATKB | B Env Decay DECB | B Env End ENDB | (LEVB)
+//   A Delay ADEL | A Trig ATRG | A Env Reset ARST
+//   (BDEL) | B Trig BTRG | B Env Reset BRST | PHRT
+//
+// Confirms independently, from the vendor: "Ratio B" is ONE parameter (hence
+// the packed pair), the four ratio offsets are their own group, and the page-3
+// order is delay, trig, reset per operator with PHRT last. It matches the
+// order recovered from H162/H163 almost exactly - which is a strong
+// cross-check on that work, obtained a completely different way.
+//
+// RATIO OFFSETS - the encoding question, answered by the format strings:
+//
+//   "+0."  "-0."  "-1.000"  "0.000"  "%s%03d"
+//
+// A sign string plus %03d: THOUSANDTHS. The display is literally
+// sign + three digits, so the stored value is an integer 0..999 with a sign
+// (special-cased at the ends as "-1.000" and "0.000"). That settles why
+// .301 was not representable in 1/256 and why no x256 scale ever fit: the
+// resolution is 1/1000, not a binary fraction. Still to find: where those
+// digits sit in the record, and how the sign is carried.
+//
+// PHASE RESET options, in image order, with their short labels:
+//
+//   Pitch All PITCH | Pitch A and B2 P2A4 | Ratio All | ... | A+B1+B2 | A+B2
+//
+// So the enum is richer than the five values sampled (all/off/C/A+B/A+B2) -
+// "A+B1+B2" and "Ratio All" exist too. Worth re-checking whether index 1
+// really is "off" or one of these.
+//
+// RATIO TABLE, the explicit non-generated entries, in image order:
+//
+//   0.25 0.50 0.75 1.25 1.50 1.75 2.25 2.50 2.75 3.00 3.25 3.50 3.75
+//   4.25 4.50 4.75 5.50 6.50 7.00 7.50 8.50 9.00 9.50 11.0 12.0 13.0
+//   14.0 15.0                                          (28 strings)
+//
+// Consistent with the two tables derived from samples (op A fine, op C
+// coarse); the whole numbers the tables also contain are formatted, not
+// stored as strings, which is why only these 28 appear.
+//
+// ---------------------------------------------------------------------------
+// ELEKTRON'S OWN OS CODEC -- TESTED AGAINST .dn2pst, AND IT IS NOT IT
+// ---------------------------------------------------------------------------
+// github.com/mischa85/elektron-firmware-tool is a clean-room tool for Elektron
+// OS .syx files. It contains aplib.c: "aPLib-variant codec: LZ77 + interlaced
+// Elias-gamma", with a working depacker and packer. aPLib was on our untried
+// shortlist, and this is Elektron's actual OS codec - so it was the obvious
+// candidate. Both of its primitives were tested and BOTH FAIL on .dn2pst:
+//
+//   codec     ap_depack() run at EVERY start offset of the payload, on a
+//             sparse file (H215) and a dense one (H163), allow_trunc=1.
+//             Nothing produced 24 bytes of output anywhere. The harness was
+//             validated first on a stream made with the repo's own ap_pack:
+//             it located that at the right offset and round-tripped it, so the
+//             negative is the codec's, not the harness's.
+//
+//   checksum  syx_content_checksum() - a 32-bit word sum where each big-endian
+//             word is XORed with its 1-based index - plus plain word sum, byte
+//             sum and CRC-32, over 9 start offsets x 4 end offsets, against
+//             the u32 at payload[-12:-8], both endians, on all 95 samples.
+//             ZERO matches.
+//
+// Consistent with what we already knew: aPLib is bit-oriented (a literal costs
+// 1 control bit + 8 data bits), so it cannot leave a patch name sitting in the
+// payload as byte-aligned ASCII - and ours does. Sound files use a different,
+// byte-aligned scheme from the OS files. Different container too: the repo's
+// magics (ELE3/ELE2/ELEK/AD) share nothing with AC 11 D3 03 or BE EF BA CE.
+//
+// WHAT THE REPO IS STILL GOOD FOR, and it is the best lead on the board: it
+// DECOMPRESSES THE OS IMAGE. The Digitone II firmware contains the code that
+// reads these files, so the decompressed image should contain the ratio
+// tables, the parameter order and the enum label strings ("RATIO OFFSET",
+// "KEY TRACK", "PHRT", "A+B2") - and a table's bytes sit next to the strings
+// that name it. That is a direct read of the layout instead of inferring it
+// one save at a time. Needs a Digitone II OS .syx (Elektron publish them) run
+// through the tool, then a string/table search of the result.
+//
+// ---------------------------------------------------------------------------
+// IS IT A KNOWN SERIALISATION FORMAT? (tested, and no)
+// ---------------------------------------------------------------------------
+// The recurring "structural" bytes are 08 10 18 20 28 30 38 40 48 50 60 70 78.
+// Those are EXACTLY protobuf field keys for fields 1-15 with wire type 0
+// (key = field << 3 | wiretype), which is too specific to dismiss. It was
+// tested properly: a strict protobuf wire-format parser over the payload,
+// every start offset from 0x2C to 0x70.
+//
+//   best clean run   85 bytes (XYZQW, from 0x3C), then a field-0 key
+//   control          400 random 200-byte buffers: 0 clean parses,
+//                    median 0 bytes consumed before failing
+//
+// So the resemblance is real - random data dies immediately, this does not -
+// but plain protobuf is RULED OUT. The stopper is that the record is full of
+// 0x00 bytes (every integer parameter's fraction byte), and 0x00 is an illegal
+// key in protobuf. The nibble-length idea tested earlier failed the opposite
+// way: it parses ANY byte stream from ANY offset, so it has no discriminating
+// power at all.
+//
+// Read: the container is standard (ZIP), the record is hand-rolled but with a
+// protobuf-flavoured key byte, and the 16-bit <int><frac> field with a 1/256
+// fraction is a synth parameter block, not a general-purpose serialiser.
+//
+// The better "known library" bet is the COMPRESSOR, not the serialiser. Ruled
+// out so far: deflate/zlib/gzip, lzma/xz, lz4, zstd, lzo, lzf, fastlz, lzjb,
+// classic LZSS. NOT yet tried, and all plausible for synth firmware:
+// heatshrink (bit-oriented LZSS, ubiquitous on microcontrollers, configurable
+// window and lookahead - would explain why every byte-aligned token model
+// failed), aPLib, LZSA1/LZSA2, LZG, LZFSE, exomizer, shrinkler, snappy,
+// brotli, QuickLZ. Worth retrying now that the decompressed record is
+// predictable: the field order below is a known-plaintext oracle, which no
+// earlier attempt had.
+//
+// ---------------------------------------------------------------------------
 // THE RECORD LAYOUT, from the two "maximal" patches (H162, H163)
 // ---------------------------------------------------------------------------
 // Every earlier sample was one parameter away from init, so the record was
@@ -123,10 +254,22 @@
 //     change with trg/rst, but 0x48 vs 0x46 differs in three bits and 0x4C vs
 //     0x4E in one, so two booleans do not account for them cleanly. A patch
 //     with two flags changed at once is the test.
-//   - the ratio offsets are NOT integer + n/256: none of the expected bytes
-//     (0x33, 0x4D, 0x99, 0xC0) appear anywhere in either file. They must live
-//     in 0x9B..0xA4, between the op B delay flags and key track, where H162 is
-//     one byte longer than H163. Encoding unknown.
+//   - the ratio offsets. Values now CONFIRMED from the device screen:
+//     H163 = C +.199, A +.301, B1 -.402, B2 +.750; H162 = C -.199, A +.750,
+//     B1 +.301, B2 -.402. So the targets are known, and the conclusion holds:
+//     NOT integer + n/256, and no single scale (x100 .. x32768, u8/u16 LE/BE,
+//     signed or magnitude) puts all four in a contiguous run in either file.
+//
+//     A hard constraint from the display: .301 is NOT representable in 1/256
+//     (77/256 = .300, 78/256 = .304), so these use a FINER resolution than
+//     every other parameter. x4096 fits all four if the display rounds (815,
+//     1233, -1647, 3072); x1000 fits exactly but appears nowhere.
+//
+//     They should sit in 0x9B..0xA4, between the op B delay flags and key
+//     track, where H162 is one byte longer. That region shares no two-byte
+//     sequence between the files even though both carry +.301, +.750 and
+//     -.402 in different slots - which is what a COMPRESSED region looks like,
+//     not a laid-out one. Probably blocked on the decompressor, not samples.
 //
 // OP A DECAY — always present, always literal. THE INIT DEFAULT IS 32, NOT 0.
 // The byte before the FIRST "00 7F" in the body holds it:
