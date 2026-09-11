@@ -1,4 +1,4 @@
-export class AudioEngine {
+class AudioEngine {
     constructor(api, session, audioContext) {
         this.api = api;
         this.session = session;

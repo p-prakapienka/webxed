@@ -1,4 +1,4 @@
-export class PatchBrowser {
+class PatchBrowser {
     constructor(api, session, patchSelect, previousButton, nextButton, status) {
         this.api = api;
         this.session = session;

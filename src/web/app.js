@@ -1,9 +1,3 @@
-import createWebxedModule from './webxed.js';
-import { AudioEngine } from './AudioEngine.js';
-import { PatchBrowser } from './PatchBrowser.js';
-import { SysexLoader } from './SysexLoader.js';
-import { WebxedApi } from './WebxedApi.js';
-
 const startButton = document.getElementById('startButton');
 const sysexInput = document.getElementById('sysexInput');
 const patchSelect = document.getElementById('patchSelect');

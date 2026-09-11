@@ -106,8 +106,9 @@ if(EMSCRIPTEN)
 
     target_link_options(webxed PRIVATE
         "-sMODULARIZE=1"
-        "-sEXPORT_ES6=1"
+        "-sEXPORT_NAME=createWebxedModule"
         "-sENVIRONMENT=web"
+        "-sSINGLE_FILE=1"
         "-sALLOW_MEMORY_GROWTH=1"
         "-sNO_EXIT_RUNTIME=1"
         "-sEXPORTED_RUNTIME_METHODS=['cwrap']"
