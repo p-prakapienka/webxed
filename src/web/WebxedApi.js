@@ -1,4 +1,4 @@
-export class WebxedApi {
+class WebxedApi {
     constructor(module) {
         this.module = module;
         this.createSynth = module.cwrap('createSynth', 'number', ['number']);

@@ -1,4 +1,4 @@
-export class SysexLoader {
+class SysexLoader {
     constructor(api, session, patchBrowser, status) {
         this.api = api;
         this.session = session;
