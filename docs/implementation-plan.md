@@ -149,7 +149,7 @@ Implement a deterministic first-pass converter.
 ```text
 DxPatch
   ↓
-DxDigitoneConverter
+DxDigitoneMapper
   ↓
 DigitonePatch
 ```
@@ -230,6 +230,16 @@ fit target envelope
 ```
 
 Numerical fitting can be improved later.
+
+Delivered:
+
+- `DxDigitoneMapper` under `src/mapper` with explicit stages (`analyseAlgorithm`, `selectOperators`, `selectDigitoneAlgorithm`, `mapRatios`, `mapLevels`, `mapFeedback`, `mapEnvelopes`, `normaliseOutput`).
+- Six-to-four operator reduction scored by output level, carrier role, carrier distance, feedback participation, envelope energy, and velocity sensitivity, preserving carriers and the feedback operator where possible.
+- Graph-based algorithm selection (surviving DX topology normalised to the closest of the eight Digitone topologies) rather than DX-to-DN number mapping.
+- Ratio mapping to the nearest supported Digitone ratio with approximation error recorded; fixed-frequency operators approximated with a warning.
+- Dedicated envelope mapper fitting DX rate/level data to Digitone attack, decay, end level, level, delay, and trigger mode.
+- `ConversionReport` with removed operators, (currently empty) merged operators, selected algorithm, warnings, and ratio error. Source patches are never mutated.
+- Native regression tests covering determinism, all 32 DX algorithms, feedback/ratio/envelope mapping, and converted-patch audio rendering.
 
 ## Milestone 7 — Main A/B workflow
 
@@ -382,6 +392,7 @@ Do not prioritise these before the DX → Digitone A/B workflow is solid:
 - Milestone 3: complete.
 - Milestone 4: complete.
 - Milestone 5: complete.
-- Milestone 6: next.
+- Milestone 6: complete.
+- Milestone 7: next.
 
 The highest-value near-term goal remains reaching Milestone 7: browse a real DX bank, preview the source, convert it, preview the Digitone approximation, tweak it, and save it.

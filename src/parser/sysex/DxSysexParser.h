@@ -5,7 +5,7 @@
 #include <span>
 #include <vector>
 
-#include "model/DxPatch.h"
+#include "model/dx/DxPatch.h"
 
 class DxSysexParser {
 public:

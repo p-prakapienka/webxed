@@ -41,8 +41,18 @@ target_include_directories(dexed_msfa PUBLIC
 )
 
 add_library(webxed_digitone STATIC
+    src/mapper/dx/AlgorithmMapper.cpp
+    src/mapper/DxDigitoneMapper.cpp
+    src/mapper/dx/EnvelopeMapper.cpp
+    src/mapper/dx/FeedbackMapper.cpp
+    src/mapper/dx/LevelMapper.cpp
+    src/mapper/dx/OperatorReducer.cpp
+    src/mapper/dx/RatioMapper.cpp
+    src/model/dx/DxPatch.cpp
+    src/model/dx/DxTopology.cpp
     src/model/digitone/DigitoneEnvelope.cpp
     src/model/digitone/DigitonePatch.cpp
+    src/model/digitone/DigitoneTopology.cpp
     src/serialization/digitone/DigitonePatchSerializer.cpp
     src/synth/digitone/DigitoneEnvelopeState.cpp
     src/synth/digitone/DigitoneOperator.cpp
@@ -53,7 +63,6 @@ target_link_libraries(webxed_digitone PUBLIC nlohmann_json::nlohmann_json)
 target_compile_options(webxed_digitone PRIVATE -Wall -Wextra -Wpedantic)
 
 add_executable(webxed
-    src/model/DxPatch.cpp
     src/parser/sysex/DxSysexParser.cpp
     src/synth/dx/DxEngine.cpp
     src/wasm/WebxedSession.cpp
@@ -81,10 +90,17 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     target_compile_options(webxed_digitone_engine_tests PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME webxed_digitone_engine_tests COMMAND webxed_digitone_engine_tests)
 
+    add_executable(webxed_converter_tests
+        tests/convert/dx/DxDigitoneConverterTest.cpp
+    )
+    target_link_libraries(webxed_converter_tests PRIVATE webxed_digitone)
+    target_compile_options(webxed_converter_tests PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME webxed_converter_tests COMMAND webxed_converter_tests)
+
     # Umbrella target so `cmake --build build --target webxed_tests` (as used by CI)
     # builds every test binary. Each test source keeps its own `main`.
     add_custom_target(webxed_tests
-        DEPENDS webxed_digitone_patch_tests webxed_digitone_engine_tests
+        DEPENDS webxed_digitone_patch_tests webxed_digitone_engine_tests webxed_converter_tests
     )
 endif()
 
