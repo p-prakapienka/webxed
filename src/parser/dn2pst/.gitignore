@@ -1,0 +1,6 @@
+build/
+baseline.actual.txt
+dn2pst
+*.o
+*.exe
+_transfer.tar.gz
