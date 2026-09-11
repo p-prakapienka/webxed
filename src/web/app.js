@@ -9,7 +9,8 @@ const sysexInput = document.getElementById('sysexInput');
 const patchSelect = document.getElementById('patchSelect');
 const previousButton = document.getElementById('previousButton');
 const nextButton = document.getElementById('nextButton');
-const noteButton = document.getElementById('noteButton');
+const dxNoteButton = document.getElementById('dxNoteButton');
+const digitoneNoteButton = document.getElementById('digitoneNoteButton');
 const status = document.getElementById('status');
 
 let audioEngine;
@@ -31,9 +32,10 @@ startButton.addEventListener('click', async () => {
     sysexLoader = new SysexLoader(api, session, patchBrowser, status);
 
     sysexInput.disabled = false;
-    noteButton.disabled = false;
+    dxNoteButton.disabled = false;
+    digitoneNoteButton.disabled = false;
     startButton.disabled = true;
-    status.textContent = 'Audio ready. Load a .syx file or audition the init voice.';
+    status.textContent = 'Audio ready. Load a .syx file or audition the DX/Digitone init voices.';
     patchBrowser.refreshNavigation();
 });
 
@@ -48,9 +50,17 @@ patchSelect.addEventListener('change', () => patchBrowser?.select(patchSelect.se
 previousButton.addEventListener('click', () => patchBrowser?.previous());
 nextButton.addEventListener('click', () => patchBrowser?.next());
 
-noteButton.addEventListener('pointerdown', () => audioEngine?.noteOn());
-noteButton.addEventListener('pointerup', () => audioEngine?.noteOff());
-noteButton.addEventListener('pointerleave', () => audioEngine?.noteOff());
+dxNoteButton.addEventListener('pointerdown', () => audioEngine?.noteOn());
+dxNoteButton.addEventListener('pointerup', () => audioEngine?.noteOff());
+dxNoteButton.addEventListener('pointerleave', () => audioEngine?.noteOff());
+
+digitoneNoteButton.addEventListener('pointerdown', () => {
+    if (audioEngine?.selectPreviewEngine(1)) {
+        audioEngine.noteOn();
+    }
+});
+digitoneNoteButton.addEventListener('pointerup', () => audioEngine?.noteOff());
+digitoneNoteButton.addEventListener('pointerleave', () => audioEngine?.noteOff());
 
 window.addEventListener('keydown', event => {
     if (event.target === patchSelect || event.target === sysexInput) {
@@ -63,12 +73,19 @@ window.addEventListener('keydown', event => {
         patchBrowser?.next();
     } else if (event.code === 'Space' && !event.repeat) {
         event.preventDefault();
+        audioEngine?.selectPreviewEngine(0);
+        audioEngine?.noteOn();
+    } else if (event.key.toLowerCase() === 'n' && !event.repeat) {
+        audioEngine?.selectPreviewEngine(1);
+        audioEngine?.noteOn();
+    } else if (event.key.toLowerCase() === 'd' && !event.repeat) {
+        audioEngine?.selectPreviewEngine(0);
         audioEngine?.noteOn();
     }
 });
 
 window.addEventListener('keyup', event => {
-    if (event.code === 'Space') {
+    if (event.code === 'Space' || event.key.toLowerCase() === 'n' || event.key.toLowerCase() === 'd') {
         audioEngine?.noteOff();
     }
 });
