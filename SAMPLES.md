@@ -4,6 +4,13 @@
 patch with exactly one parameter changed, so any byte difference between two
 files is attributable.
 
+> **Note.** The per-batch commentary below describes how each parameter was
+> *found*, back when the payload was an unidentified compressed stream. The
+> payload is now known to be LZ4 and every value is read from a fixed offset in
+> the decompressed record, so where a note says a value is "absorbed",
+> "unrecoverable" or "provisional", that applied to the old pattern method only.
+> All 95 samples now decode completely. Corrections are marked inline.
+
 `H162`–`H177` were saved as `FM T0NE …` rather than `FM INIT …`. The name lives
 inside the compressed stream and shifts everything after it, so every `FM T0NE`
 batch was given names of the same length — which is what reduces each batch's
@@ -107,9 +114,10 @@ the three op A files; `08 00 ?? 01 00 01 00` only the two readable op B files.
 With both delays absorbed the group collapses to `08 00 11 01`.
 
 `H173` (op B delay 64) is byte-identical to an init save in this region apart
-from one byte in the token that follows, so its value is not recoverable — the
-reader reports `?` for it rather than the 0 default. 64 is the value that gets
-absorbed on almost every parameter.
+from one byte in the token that follows, so under the pattern method its value
+was not recoverable. **Now reads 64 directly** from record offset `0x08C`. 64
+was the value the compressor absorbed on almost every parameter — that whole
+class of blind spot is gone.
 
 H175 and H176 are byte-identical after the value byte; H177 diverges about 19
 bytes later and is a byte longer overall, because `0x7F` occurs elsewhere in the
@@ -142,11 +150,14 @@ op A rst off   02 46 00 51 01 00 01 00     | 7F 60 ...
 ```
 
 `op B rst` off differs from all-on in exactly two bytes (`18`→`48`, `06`→`04`)
-with no length change — and both of those bytes move for unrelated reasons
-elsewhere, so neither can be called the bit. The reader matches each boolean as
-a whole-group string from one file and labels it **provisional**; a second
-sample of any of them, or a file with two page-3 edits at once, is expected to
-break it.
+with no length change, and both of those bytes move for unrelated reasons
+elsewhere — so under the pattern method neither could be called the bit, and all
+four booleans were matched as whole-group strings from a single file each and
+labelled provisional.
+
+**All four now read directly** as u16 fields: op A trig `0x088`, op A reset
+`0x08A`, op B trig `0x08E`, op B reset `0x090`. The provisional readings were
+correct, but they were correct by luck rather than by evidence.
 
 ## Page 3 — phase reset (default "all")
 
@@ -169,10 +180,11 @@ A+B2  (H164)   78 3F 1F 00 11 04 3E ...
 ```
 
 `H166` and `H165` differ from each other in exactly one payload byte, which is
-what pinned it. The enum is a contiguous index from zero: 0 all (zero-payload
-form), 1 off, 2 C, 3 A+B, 4 A+B2. Value 1 = off comes from the device; the other
-three are measured. `0 = all` is an inference — `H167` stores no payload rather
-than a literal `0x00`.
+what pinned it. The enum is a contiguous index from zero: 0 all, 1 off, 2 C,
+3 A+B, 4 A+B2, at record offset `0x072`. Value 1 = off comes from the device;
+the rest are measured. `0 = all` was an inference under the pattern method (the
+field simply vanished); in the decompressed record `H167` stores a literal `0`,
+so it is now a measurement.
 
 ### The `H213` break — solved
 
@@ -278,52 +290,16 @@ Both halves ride in one number: `packed >> 1 == 19 * b2 + b1`.
 | `H248_FM_INIT_ALG4` | algorithm 4 |
 | `H249_FM_INIT_ALG2` | algorithm 2 |
 
-## Compression probes
+## Compression probes — historical
 
-Init patch, untouched — **only the name varies**. These exist to attack the
-compressor with known plaintext, since the name is the one thing whose
-decompressed value is known in advance.
+Seven patches named to contain repeats (`AAAAA`, `ABABAB`, `AAAAAAAAAAAAAAA`,
+`ABABABABABABABA`, `ABCABC`, `AAAAB`, `XYZQW`) were made to pin the match-length
+field of what was then an unidentified codec.
 
-| file | name | result |
-|---|---|---|
-| `H215_FM_INIT_XYZQW` | `FM INIT XYZQW` | no repeats — fully literal, the control |
-| `H214_FM_INIT_AAAAB` | `FM INIT AAAAB` | run of 3 — literal, so min match length > 3 |
-| `H216_FM_INIT_ABCABC` | `FM INIT ABCABC` | length 3 at distance 3 — literal |
-| `H219_FM_INIT_AAAAA` | `FM INIT AAAAA` | distance 1, length 4 → `01 00 10` |
-| `H181_FM_INIT_AAAAAA` | `FM INIT AAAAAA` | distance 1, length 5 → `01 00 51` |
-| `H218_FM_INIT_AAAAAAA` | `FM INIT AAAAAAA` | distance 1, length 6 → `01 00 31` |
-| `H217_FM_INIT_ABABAB` | `FM INIT ABABAB` | distance 2, length 4 → `02 00 51` |
-| `H180_FM_INIT_ABABABA` | `FM INIT ABABABA` | distance 2, length 5 → `02 00 41` |
-| `H179_AAAAAAAAAAAAAAA` | `AAAAAAAAAAAAAAA` | distance 1, length 14 → `01 00 41` |
-| `H178_ABABABABABABABA` | `ABABABABABABABA` | distance 2, length 13 → `02 00 41` |
-
-The last two are the important ones. `02 00 41` encodes **both** a length-5 and
-a length-13 match, so the token cannot carry the length — which killed every
-model built on that assumption. Minimum match length is 4, confirmed by
-`AAAAB` staying literal while `AAAAA` compresses.
-
-Together these probes are exhausted: seven data points contradict every simple
-layout. Further progress needs known plaintext inside the body, not the name.
-
-
-### Why these seven probes could never pin the length
-
-Every one of them is a **pure periodic repeat**:
-
-| name | literals + token | dist | bytes copied |
-|---|---|---|---|
-| `FM INIT XYZQW` | 13 literals, no token | — | — |
-| `FM INIT AAAAB` | fully literal, no token | — | — |
-| `FM INIT AAAAA` | `41` + `01 00` | 1 | 4 |
-| `FM INIT AAAAAAA` | `41` + `01 00` | 1 | 6 |
-| `FM INIT ABABAB` | `41 42` + `02 00` | 2 | 4 |
-| `AAAAAAAAAAAAAAA` | `41` + `01 00` | 1 | 14 |
-| `ABABABABABABABA` | `41 42` + `02 00` | 2 | 13 |
-
-In every case `dist` equals the number of literals and the copy runs to the end
-of the string. So "copy N bytes" and "copy until the pattern is exhausted"
-produce the same output, and no probe of this shape can tell them apart. That,
-not a subtle token layout, is why seven data points never yielded a length.
-
-What is needed is a name where a match is followed by **more literals** — see
-`SAMPLES_TODO.md`.
+They are now only of historical interest: the codec is **LZ4 block format**, so
+the token layout was never a mystery to be solved — it was documented all along.
+The probes are kept because they are still valid samples, and because they
+record a real methodological lesson: every one of them was a *pure periodic
+repeat*, in which "copy N bytes" and "copy to the end of the pattern" produce
+identical output. Seven data points that cannot distinguish the two hypotheses
+are one data point, repeated.
