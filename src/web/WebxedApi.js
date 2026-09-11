@@ -6,6 +6,7 @@ export class WebxedApi {
         this.loadSysexNative = module.cwrap('loadSysex', 'number', ['number', 'number', 'number']);
         this.patchNameNative = module.cwrap('patchName', 'string', ['number', 'number']);
         this.selectPatchNative = module.cwrap('selectPatch', 'number', ['number', 'number']);
+        this.selectPreviewEngineNative = module.cwrap('selectPreviewEngine', 'number', ['number', 'number']);
         this.noteOnNative = module.cwrap('noteOn', null, ['number', 'number', 'number']);
         this.noteOffNative = module.cwrap('noteOff', null, ['number']);
         this.renderSampleNative = module.cwrap('renderSample', 'number', ['number']);
@@ -13,6 +14,10 @@ export class WebxedApi {
 
     createSession(sampleRate) {
         return this.createSynth(sampleRate);
+    }
+
+    destroySession(session) {
+        this.destroySynth(session);
     }
 
     loadSysex(session, bytes) {
@@ -31,6 +36,10 @@ export class WebxedApi {
 
     selectPatch(session, index) {
         return this.selectPatchNative(session, index) === 1;
+    }
+
+    selectPreviewEngine(session, engineIndex) {
+        return this.selectPreviewEngineNative(session, engineIndex) === 1;
     }
 
     noteOn(session, midiNote, velocity) {

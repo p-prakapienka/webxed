@@ -123,31 +123,22 @@ Delivered:
 - Versioned JSON serialization with format validation and round-trip support.
 - Native tests covering defaults, serialization, escaping, compatibility markers, and parameter validation.
 
-## Milestone 5 — Simplified four-operator Digitone engine ← NEXT
+## Milestone 5 — Simplified four-operator Digitone engine ✅
 
 Implement a browser-preview engine that approximates Digitone II FM Tone behaviour.
 
-Initial subset:
+Delivered:
 
-- Four operators.
-- Eight Digitone-style FM topologies.
-- Digitone-style ratios.
-- Feedback.
-- Detune.
-- A/B operator envelopes.
+- Four independent operators.
+- Eight four-operator FM topologies represented explicitly by the engine.
+- Digitone-style frequency ratios with harmonic shaping.
+- Feedback and detune controls.
+- Separate A/B runtime envelopes with delay, attack, sustain/triggered decay, and end level.
 - Carrier/output mix.
-
-Preferred structure:
-
-```text
-DigitoneEngine
-  loadPatch(DigitonePatch)
-  noteOn(...)
-  noteOff(...)
-  render(...)
-```
-
-Reuse low-level operator/envelope/phase components where sensible, while keeping `DxEngine` and `DigitoneEngine` distinct.
+- Independent `DigitoneEngine` kept separate from `DxEngine` and `DigitonePatch`.
+- `WebxedSession` preview-engine selection through the thin WASM C ABI.
+- Browser DX/Digitone A/B audition controls.
+- Native regression tests covering all eight algorithms, finite/bounded output, note release, and audible parameter changes.
 
 Deliverable: hand-authored target patches playable in the browser.
 
@@ -390,6 +381,7 @@ Do not prioritise these before the DX → Digitone A/B workflow is solid:
 - Milestone 2: complete.
 - Milestone 3: complete.
 - Milestone 4: complete.
-- Milestone 5: next.
+- Milestone 5: complete.
+- Milestone 6: next.
 
 The highest-value near-term goal remains reaching Milestone 7: browse a real DX bank, preview the source, convert it, preview the Digitone approximation, tweak it, and save it.
