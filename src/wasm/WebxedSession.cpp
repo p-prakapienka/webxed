@@ -1,36 +1,21 @@
 #include "wasm/WebxedSession.h"
 
-#include <span>
+#include "serialization/digitone/DigitonePatchSerializer.h"
 
-namespace {
-DigitonePatch initDigitonePatch() {
-    DigitonePatch patch;
-    patch.setName("INIT DN");
-    patch.setAlgorithm(1);
-    patch.setRatioC(1.0);
-    patch.setRatioA(2.0);
-    patch.setRatioB1(3.0);
-    patch.setRatioB2(6.0);
-    patch.setHarmonic(0.0);
-    patch.setDetune(0);
-    patch.setFeedback(24);
-    patch.setMix(0);
-    patch.setEnvelopeA(DigitoneEnvelope(4, 60, 70, 127, 0, false, true));
-    patch.setEnvelopeB(DigitoneEnvelope(0, 48, 30, 110, 0, false, true));
-    return patch;
-}
-}
+#include <nlohmann/json.hpp>
+
+#include <span>
 
 WebxedSession::WebxedSession(double sampleRate)
     : dxEngine(sampleRate), digitoneEngine(sampleRate), patches{DxPatch::initVoice()} {
     dxEngine.loadPatch(patches.front());
-    digitoneEngine.loadPatch(initDigitonePatch());
 }
 
 int WebxedSession::loadSysex(const uint8_t* data, std::size_t size) {
     try {
         patches = parser.parse(std::span<const uint8_t>(data, size));
         selectedPatch = 0;
+        clearConversion();
         dxEngine.loadPatch(patches.front());
         return static_cast<int>(patches.size());
     } catch (...) {
@@ -55,7 +40,11 @@ bool WebxedSession::selectPatch(int index) {
     if (index < 0 || static_cast<std::size_t>(index) >= patches.size()) {
         return false;
     }
+    if (selectedPatch == static_cast<std::size_t>(index)) {
+        return true;
+    }
     selectedPatch = static_cast<std::size_t>(index);
+    clearConversion();
     dxEngine.loadPatch(patches[selectedPatch]);
     return true;
 }
@@ -66,12 +55,57 @@ bool WebxedSession::selectPreviewEngine(int engineIndex) {
         dxEngine.noteOff();
         return true;
     }
-    if (engineIndex == 1) {
+    if (engineIndex == 1 && converted) {
         previewEngine = PreviewEngine::digitone;
         digitoneEngine.noteOff();
         return true;
     }
     return false;
+}
+
+bool WebxedSession::convert() {
+    if (patches.empty()) {
+        return false;
+    }
+
+    const DxPatch& source = patches[selectedPatch];
+    conversion = mapper.convert(source);
+    converted = true;
+    digitoneEngine.loadPatch(conversion.patch);
+    digitoneEngine.noteOff();
+    return true;
+}
+
+const char* WebxedSession::conversionJson() {
+    using Json = nlohmann::json;
+
+    const DxPatch& source = patches[selectedPatch];
+    Json json = {
+        {"converted", converted},
+        {"source", {
+            {"name", source.name()},
+            {"algorithm", source.algorithm()}
+        }}
+    };
+
+    if (converted) {
+        json["target"] = {
+            {"name", conversion.patch.name()},
+            {"algorithm", conversion.patch.algorithm()}
+        };
+        json["report"] = {
+            {"removedOperators", conversion.report.removedOperators},
+            {"mergedOperators", conversion.report.mergedOperators},
+            {"selectedAlgorithm", conversion.report.selectedAlgorithm},
+            {"warnings", conversion.report.warnings},
+            {"ratioApproximationError", conversion.report.ratioApproximationError},
+            {"converterVersion", ConversionReport::converterVersion}
+        };
+        json["patch"] = Json::parse(DigitonePatchSerializer().serialize(conversion.patch));
+    }
+
+    jsonBuffer = json.dump();
+    return jsonBuffer.c_str();
 }
 
 void WebxedSession::noteOn(int midiNote, double velocity) {
@@ -94,4 +128,11 @@ double WebxedSession::renderSample() {
     return previewEngine == PreviewEngine::dx
         ? dxEngine.renderSample()
         : digitoneEngine.renderSample();
+}
+
+void WebxedSession::clearConversion() {
+    converted = false;
+    conversion = {};
+    previewEngine = PreviewEngine::dx;
+    digitoneEngine.noteOff();
 }

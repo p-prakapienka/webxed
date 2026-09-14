@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string_view>
 
-DxPatch::DxPatch(std::array<uint8_t, size> data) : values(data) {}
+DxPatch::DxPatch(std::array<uint8_t, DxPatch::size> data) : values(data) {}
 
 const std::array<uint8_t, DxPatch::size>& DxPatch::data() const {
     return values;
@@ -17,8 +17,12 @@ std::string DxPatch::name() const {
     return result;
 }
 
+int DxPatch::algorithm() const {
+    return static_cast<int>(values[134]) + 1;
+}
+
 DxPatch DxPatch::initVoice() {
-    std::array<uint8_t, size> patch{};
+    std::array<uint8_t, DxPatch::size> patch{};
 
     for (std::size_t op = 0; op < 6; ++op) {
         const std::size_t offset = op * 21;

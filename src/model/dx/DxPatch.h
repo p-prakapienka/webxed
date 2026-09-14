@@ -13,6 +13,7 @@ public:
 
     const std::array<uint8_t, size>& data() const;
     std::string name() const;
+    int algorithm() const;
     static DxPatch initVoice();
 
 private:

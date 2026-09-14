@@ -97,10 +97,21 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     target_compile_options(webxed_converter_tests PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME webxed_converter_tests COMMAND webxed_converter_tests)
 
+    add_executable(webxed_session_tests
+        tests/session/WebxedSessionTest.cpp
+        src/parser/sysex/DxSysexParser.cpp
+        src/synth/dx/DxEngine.cpp
+        src/wasm/WebxedSession.cpp
+    )
+    target_include_directories(webxed_session_tests PRIVATE src)
+    target_link_libraries(webxed_session_tests PRIVATE dexed_msfa webxed_digitone)
+    target_compile_options(webxed_session_tests PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME webxed_session_tests COMMAND webxed_session_tests)
+
     # Umbrella target so `cmake --build build --target webxed_tests` (as used by CI)
     # builds every test binary. Each test source keeps its own `main`.
     add_custom_target(webxed_tests
-        DEPENDS webxed_digitone_patch_tests webxed_digitone_engine_tests webxed_converter_tests
+        DEPENDS webxed_digitone_patch_tests webxed_digitone_engine_tests webxed_converter_tests webxed_session_tests
     )
 endif()
 
@@ -112,6 +123,7 @@ if(EMSCRIPTEN)
     configure_file(src/web/AudioEngine.js "${WEB_OUTPUT_DIR}/AudioEngine.js" COPYONLY)
     configure_file(src/web/PatchBrowser.js "${WEB_OUTPUT_DIR}/PatchBrowser.js" COPYONLY)
     configure_file(src/web/SysexLoader.js "${WEB_OUTPUT_DIR}/SysexLoader.js" COPYONLY)
+    configure_file(src/web/ConversionPanel.js "${WEB_OUTPUT_DIR}/ConversionPanel.js" COPYONLY)
     configure_file(src/web/WebxedApi.js "${WEB_OUTPUT_DIR}/WebxedApi.js" COPYONLY)
 
     set_target_properties(webxed PROPERTIES
@@ -128,6 +140,6 @@ if(EMSCRIPTEN)
         "-sALLOW_MEMORY_GROWTH=1"
         "-sNO_EXIT_RUNTIME=1"
         "-sEXPORTED_RUNTIME_METHODS=['cwrap']"
-        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_selectPreviewEngine','_noteOn','_noteOff','_renderSample']"
+        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_selectPreviewEngine','_convert','_conversionJson','_noteOn','_noteOff','_renderSample']"
     )
 endif()

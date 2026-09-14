@@ -283,6 +283,16 @@ Suggested shortcuts:
 
 Deliverable: the complete useful Webxed loop.
 
+Delivered:
+
+- `WebxedSession::convert` calls `DxDigitoneMapper::convert` on the selected `DxPatch` and loads `DigitoneEngine` with the result. The source patch is not mutated.
+- Digitone preview is disabled until convert. Selecting another patch or loading SysEx clears the conversion.
+- Thin WASM ABI: `convert` and `conversionJson` (source/target names and algorithms, report, serialized target patch).
+- Browser A/B panel: source vs target side by side, conversion warnings, Convert (C), Save JSON (S), DX (D) / Digitone (N) audition.
+- Native session tests for convert wiring, determinism, finite converted audio, and loadSysex clearing conversion.
+
+Not in this slice: Digitone editing UI (Milestone 8) and the in-browser library (Milestone 9). Save downloads `webxed-digitone-patch` JSON.
+
 ## Milestone 8 — Digitone editing UI
 
 Add a focused editor for the converted target patch.
@@ -393,6 +403,7 @@ Do not prioritise these before the DX → Digitone A/B workflow is solid:
 - Milestone 4: complete.
 - Milestone 5: complete.
 - Milestone 6: complete.
-- Milestone 7: next.
+- Milestone 7: complete (convert, A/B, warnings, JSON download).
+- Milestone 8: next.
 
-The highest-value near-term goal remains reaching Milestone 7: browse a real DX bank, preview the source, convert it, preview the Digitone approximation, tweak it, and save it.
+The highest-value near-term goal is Milestone 8: a focused Digitone editor so converted patches can be tweaked live in the browser.
