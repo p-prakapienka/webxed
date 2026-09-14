@@ -69,7 +69,7 @@ C++20, `-Wall -Wextra -Wpedantic`. Native tests are skipped when `EMSCRIPTEN` is
 
 Run the checks that match the change (native tests for mapper/engine/model, Emscripten for session/ABI/web). If a required command cannot run, report that command, the error, and what was not validated. Do not claim a full pass.
 
-CI builds and tests only. It is not code review. Do not add review bots, AI review jobs, or extra workflow checks that comment on style or design. Review happens on the PR, by a human.
+`.github/workflows/ci.yml` is build and test only. Do not add review, lint-as-review, or comment jobs to that workflow. Review is the agent pass in **Code review** below, posted on the PR.
 
 ## WASM ABI lockstep
 
@@ -130,6 +130,35 @@ Rebase and squash. Keep `main` linear.
 - One plan-shaped change per PR. Do not stage unrelated local changes.
 
 Match the existing style: Summary, Scope (what this slice does **not** include), Verification (`ctest` and/or the Emscripten build). When a slice lands, mark **Current status** in the implementation plan — not here.
+
+Automatic review uses the **Code review** section. Request or enable Copilot/agent review on the PR; do not wait for CI to stand in for it.
+
+## Code review
+
+This section is for automatic and on-demand PR review (Copilot code review and any other coding agent). Post findings as PR review comments. Green CI is not a review.
+
+### How to review
+
+- Read the PR description, the diff, and the relevant bits of this file and the implementation plan.
+- Comment on the line that is wrong. Put architecture and scope issues in the review summary.
+- Request changes for invariant, ABI, audio-path, or missing-test failures. Comment (do not block) for optional suggestions.
+- Do not nitpick style that matches the surrounding file. Do not demand a framework, bundler, or extra CI job.
+- Do not rubber-stamp. If the diff is large, say what you did not inspect.
+- Suggest the smallest fix. Do not rewrite `DxDigitoneMapper` as a review comment unless a test shows a heuristic bug.
+
+### Rubric
+
+Flag if any of these fail:
+
+1. **Scope** — work the plan defers; unrelated refactors; Digitone audition still the init voice when the PR claims conversion is wired.
+2. **Models and engines** — `Dx*` and `Digitone*` mixed, or the source `DxPatch` mutated during convert.
+3. **Mapper** — stages flattened; DX algorithms number-mapped onto Digitone algorithms instead of graph matching.
+4. **ABI** — `WasmBridge.cpp`, `EXPORTED_FUNCTIONS`, and `WebxedApi.js` not updated together; fat C API around mapper internals; ES modules or a bundler in `src/web`.
+5. **Audio path** — allocate/lock/IO in `renderSample` / `noteOn` / `noteOff`; DOM used as engine source of truth.
+6. **Tests** — behaviour change without a native test (or without saying why); converter coverage dropped (determinism, no source mutation, 32 algorithms, ranges, finite audio); new test binary not on `webxed_tests`.
+7. **Git** — merge commits from `main`; files under `build/` committed.
+
+Praise only when it helps the author (a correct lockstep ABI change, a test that pins a real heuristic). Skip filler approval text.
 
 ## Definition of done
 
