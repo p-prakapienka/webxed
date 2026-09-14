@@ -2,19 +2,19 @@
 
 Browser DX7/Dexed preset audition and Digitone II conversion. Not a Dexed clone.
 
-Read `README.md` and `docs/implementation-plan.md` before changing code. The plan is the product spec; this file is the operating contract. Update both in the same PR when status, layout, ABI, or commands change.
+Read `README.md` and `docs/implementation-plan.md` before changing code. The plan is the product spec, including **Current status** and the next slice. This file is the operating contract: durable rules and how to work. Do not copy milestone accounting here.
 
-## Current state
+Update this file when layout, ABI, commands, or wiring facts change. Update the plan's Current status when a slice lands.
 
-Milestones 1–6 are done. Milestone 7 (the A/B workflow) is next. See **Current status** in the implementation plan.
+## Not yet wired
 
-`DxDigitoneMapper` exists and is covered by native tests. It is **not** wired into the product yet:
+`DxDigitoneMapper` exists and is covered by native tests. The product still does not call it:
 
 - `WebxedSession` loads a hand-authored Digitone init voice, not a converted patch.
 - The WASM ABI has no convert / report / target-patch exports.
 - The browser Digitone button auditions that init voice.
 
-Do not reimplement conversion. Call `DxDigitoneMapper::convert(const DxPatch&)` and keep the source patch unchanged.
+Do not reimplement conversion. Call `DxDigitoneMapper::convert(const DxPatch&)` and keep the source patch unchanged. Delete this section in the same PR that wires convert through session, WASM, and UI.
 
 ## Non-negotiables
 
@@ -23,7 +23,7 @@ Do not reimplement conversion. Call `DxDigitoneMapper::convert(const DxPatch&)` 
 - Do not number-map 32 DX algorithms onto 8 Digitone algorithms. Treat topologies as graphs: reduce operators, normalise, pick the closest of the eight Digitone topologies.
 - Keep `WasmBridge.cpp` a thin `extern "C"` ABI over `WebxedSession`. Session and application state do not belong in the bridge.
 - Keep `src/web` as classic scripts loaded in dependency order. No ES modules, no bundler. The Emscripten build is `SINGLE_FILE` so `index.html` runs from `file://`.
-- Do not start milestones 8–12, filters/effects, sequencers, a pixel-perfect Digitone skin, a full Dexed editor, or native Digitone preset export until the A/B loop works.
+- Follow the plan's current slice. Do not start work the plan defers until the A/B loop works (full Dexed editor, filters/effects, sequencers, pixel-perfect Digitone skin, native Digitone preset export).
 - Dexed is pinned to MSFA only (`DEXED_COMMIT` in `CMakeLists.txt`). Do not pull JUCE or the Dexed application.
 - Do not commit `build/`, `build-native/`, `build-web/`, or FetchContent checkouts.
 
@@ -77,7 +77,7 @@ Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSyse
 
 `selectPreviewEngine`: `0` = DX, `1` = Digitone. Audition note is A4 (MIDI 69) unless the caller says otherwise.
 
-Milestone 7 should add session methods first, then one or two ABI functions (convert, report, serialized target). Do not grow a fat C API around mapper internals.
+When wiring conversion, add `WebxedSession` methods first, then one or two ABI functions (convert, report, serialized target). Do not grow a fat C API around mapper internals.
 
 ## Conversion pipeline
 
@@ -101,26 +101,10 @@ Working state lives in `ConversionContext`. Results are `ConversionResult { Digi
 
 `AudioEngine`, `PatchBrowser`, `SysexLoader`, `WebxedApi`, `app.js` — keep those responsibilities split.
 
-Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview. Milestone 7 should add `C` convert, `E` edit, `S` save without stealing those.
+Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview. The plan's A/B shortcuts also want `C` convert, `E` edit, `S` save; do not steal the existing keys.
 
-`ScriptProcessorNode` is a known temporary audio path; do not treat replacing it as a prerequisite for Milestone 7.
-
-## Milestone 7 — definition of done
-
-The useful Webxed loop, against a real `.syx`:
-
-1. Browse patches.
-2. Preview the source DX patch.
-3. Convert via `DxDigitoneMapper` (do not rewrite it unless a test proves a heuristic bug).
-4. Preview the **converted** Digitone patch, not the init voice.
-5. Show conversion warnings.
-6. Instant A/B (D / N / Space).
-7. Save as versioned `webxed-digitone` JSON (serializer already exists).
-
-Side-by-side UI should show source name + DX algorithm, target name + Digitone algorithm, and warnings. Convert / Edit / Save actions as in the plan.
-
-Done means: native `ctest` green, Emscripten build green, and pressing Digitone preview plays the converted patch.
+`ScriptProcessorNode` is a known temporary audio path; do not treat replacing it as a prerequisite for the A/B loop.
 
 ## Pull requests
 
-Match the existing style: Summary, Scope (what this milestone does **not** include), Verification (`ctest` and/or the Emscripten build). One milestone-shaped change per PR. Mark the plan status when a milestone actually lands.
+Match the existing style: Summary, Scope (what this slice does **not** include), Verification (`ctest` and/or the Emscripten build). One plan-shaped change per PR. When a slice lands, mark **Current status** in the implementation plan — not here.
