@@ -5,7 +5,7 @@
 
 DxPatch::DxPatch(std::array<uint8_t, size> data) : values(data) {}
 
-const std::array<uint8_t, DxPatch::size>& DxPatch::data() const {
+const std::array<uint8_t, size>& DxPatch::data() const {
     return values;
 }
 
@@ -15,6 +15,10 @@ std::string DxPatch::name() const {
         result.pop_back();
     }
     return result;
+}
+
+int DxPatch::algorithm() const {
+    return static_cast<int>(values[134]) + 1;
 }
 
 DxPatch DxPatch::initVoice() {

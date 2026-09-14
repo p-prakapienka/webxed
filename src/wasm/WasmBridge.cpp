@@ -35,6 +35,14 @@ int selectPreviewEngine(WebxedSession* session, int engineIndex) {
     return session != nullptr && session->selectPreviewEngine(engineIndex) ? 1 : 0;
 }
 
+int convert(WebxedSession* session) {
+    return session != nullptr && session->convert() ? 1 : 0;
+}
+
+const char* conversionJson(WebxedSession* session) {
+    return session != nullptr ? session->conversionJson() : "{}";
+}
+
 void noteOn(WebxedSession* session, int midiNote, double velocity) {
     if (session != nullptr) {
         session->noteOn(midiNote, velocity);

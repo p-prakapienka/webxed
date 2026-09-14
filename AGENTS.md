@@ -8,16 +8,6 @@ Preserve existing behaviour unless the task explicitly changes it. Keep diffs fo
 
 Update this file when layout, ABI, commands, or wiring facts change. Update the plan's Current status when a slice lands.
 
-## Not yet wired
-
-`DxDigitoneMapper` exists and is covered by native tests. The product still does not call it:
-
-- `WebxedSession` loads a hand-authored Digitone init voice, not a converted patch.
-- The WASM ABI has no convert / report / target-patch exports.
-- The browser Digitone button auditions that init voice.
-
-Do not reimplement conversion. Call `DxDigitoneMapper::convert(const DxPatch&)` and keep the source patch unchanged. Delete this section in the same PR that wires convert through session, WASM, and UI.
-
 ## Non-negotiables
 
 - Keep `DxPatch` / `DxEngine` separate from `DigitonePatch` / `DigitoneEngine`. Reuse low-level FM parts only where it is clearly cheaper than duplication.
@@ -79,11 +69,11 @@ Any ABI change must update all three in the same PR:
 2. `EXPORTED_FUNCTIONS` (and runtime methods) in `CMakeLists.txt`
 3. `cwrap` + JS wrapper in `src/web/WebxedApi.js`
 
-Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_noteOn`, `_noteOff`, `_renderSample`.
+Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_convert`, `_conversionJson`, `_noteOn`, `_noteOff`, `_renderSample`.
 
-`selectPreviewEngine`: `0` = DX, `1` = Digitone. Audition note is A4 (MIDI 69) unless the caller says otherwise.
+`selectPreviewEngine`: `0` = DX, `1` = Digitone (only after a successful convert). Audition note is A4 (MIDI 69) unless the caller says otherwise.
 
-When wiring conversion, add `WebxedSession` methods first, then one or two ABI functions (convert, report, serialized target). Do not grow a fat C API around mapper internals.
+Conversion ABI is two functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `conversionJson` returns source/target names and algorithms, the report, and the serialized `webxed-digitone-patch`. Do not grow a fat C API around mapper internals.
 
 ## Conversion pipeline
 
@@ -114,9 +104,9 @@ Working state lives in `ConversionContext`. Results are `ConversionResult { Digi
 
 ## Browser shell
 
-`AudioEngine`, `PatchBrowser`, `SysexLoader`, `WebxedApi`, `app.js` — keep those responsibilities split.
+`AudioEngine`, `PatchBrowser`, `SysexLoader`, `ConversionPanel`, `WebxedApi`, `app.js` — keep those responsibilities split.
 
-Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview. The plan's A/B shortcuts also want `C` convert, `E` edit, `S` save; do not steal the existing keys.
+Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview (after convert), `C` convert, `S` save JSON. Leave `E` for the editor slice.
 
 `ScriptProcessorNode` is a known temporary audio path; do not treat replacing it as a prerequisite for the A/B loop.
 
@@ -145,7 +135,7 @@ This review is not CI and must not become a GitHub Actions job.
 
 The review subagent flags if any of these fail:
 
-1. **Scope** — work the plan defers; unrelated refactors; Digitone audition still the init voice when the change claims conversion is wired.
+1. **Scope** — work the plan defers; unrelated refactors; Digitone preview without a convert, or convert that does not call `DxDigitoneMapper`.
 2. **Models and engines** — `Dx*` and `Digitone*` mixed, or the source `DxPatch` mutated during convert.
 3. **Mapper** — stages flattened; DX algorithms number-mapped onto Digitone algorithms instead of graph matching.
 4. **ABI** — `WasmBridge.cpp`, `EXPORTED_FUNCTIONS`, and `WebxedApi.js` not updated together; fat C API around mapper internals; ES modules or a bundler in `src/web`.
