@@ -69,6 +69,8 @@ C++20, `-Wall -Wextra -Wpedantic`. Native tests are skipped when `EMSCRIPTEN` is
 
 Run the checks that match the change (native tests for mapper/engine/model, Emscripten for session/ABI/web). If a required command cannot run, report that command, the error, and what was not validated. Do not claim a full pass.
 
+CI builds and tests only. It is not code review. Do not add review bots, AI review jobs, or extra workflow checks that comment on style or design. Review happens on the PR, by a human.
+
 ## WASM ABI lockstep
 
 Any ABI change must update all three in the same PR:
