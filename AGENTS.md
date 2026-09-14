@@ -157,10 +157,23 @@ Do not nitpick style that matches the surrounding file. Suggest the smallest fix
 
 Blocking: invariant, ABI, audio-path, or missing-test failures. The rest is optional.
 
+## After commit
+
+Push, then watch the GitHub Actions run for that commit (`ci.yml`). Do not wait for the user to notice a red X.
+
+If the pipeline fails:
+
+1. Read the failing job log.
+2. Fix the cause on the same branch (the smallest change that makes that job pass).
+3. Run the pre-commit review subagent, commit, push, and watch again.
+
+Keep going until the run is green. If the failure is infrastructure (runner, network fetch of Dexed, missing Emscripten on the runner) and not this change, stop looping and report the log — do not paper over it in product code.
+
 ## Definition of done
 
 - The requested behaviour is implemented without unrelated changes.
 - Native tests and/or the Emscripten build that match the change pass, or the gap is reported with command, error, and unvalidated scope.
 - ABI, session, and JS stay in lockstep when the boundary changes.
 - A review subagent ran on the uncommitted diff before the commit; blocking findings were fixed or explicitly dismissed.
-- The summary lists changed behaviour, validation run, review outcome, and known limitations.
+- After push, the `ci.yml` run for that commit was watched to completion; failures were fixed on the same branch, or an infrastructure gap was reported.
+- The summary lists changed behaviour, validation run, review outcome, CI result, and known limitations.
