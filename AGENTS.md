@@ -133,11 +133,11 @@ Match the existing style: Summary, Scope (what this slice does **not** include),
 
 ## Code review
 
-After implementing a behaviour change, spawn a **separate subagent** to review the diff before you open the PR or call the work done. Do not review your own patch in the same turn. Docs-only wording tweaks can skip this; anything that touches `src/` or `tests/` cannot.
+Before every commit, spawn a **separate subagent** to review the uncommitted diff. Do not commit until that review finishes. Do not review your own patch in the same turn. Do not run a review after each edit — only when you are about to commit.
 
-The parent agent gives the subagent the diff (or files changed), the task, and this rubric. The subagent does not write the feature. It only reports issues.
+The parent agent gives the subagent the diff (or files to be committed), the task, and this rubric. The subagent does not write the feature. It only reports issues.
 
-The parent must fix every blocking finding, or record why it is wrong, then re-run the subagent if the fix was non-trivial. Optional suggestions may be skipped with a one-line reason.
+The parent must fix every blocking finding, or record why it is wrong, then re-run the subagent if the fix was non-trivial. Optional suggestions may be skipped with a one-line reason. Then commit.
 
 This review is not CI and must not become a GitHub Actions job.
 
@@ -162,5 +162,5 @@ Blocking: invariant, ABI, audio-path, or missing-test failures. The rest is opti
 - The requested behaviour is implemented without unrelated changes.
 - Native tests and/or the Emscripten build that match the change pass, or the gap is reported with command, error, and unvalidated scope.
 - ABI, session, and JS stay in lockstep when the boundary changes.
-- A review subagent has run on the diff; blocking findings are fixed or explicitly dismissed.
+- A review subagent ran on the uncommitted diff before the commit; blocking findings were fixed or explicitly dismissed.
 - The summary lists changed behaviour, validation run, review outcome, and known limitations.
