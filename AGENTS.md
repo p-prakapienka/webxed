@@ -107,4 +107,10 @@ Keys already in use: Left/Right = previous/next patch, Space and `D` = DX previe
 
 ## Pull requests
 
-Match the existing style: Summary, Scope (what this slice does **not** include), Verification (`ctest` and/or the Emscripten build). One plan-shaped change per PR. When a slice lands, mark **Current status** in the implementation plan — not here.
+Rebase and squash. Keep `main` linear.
+
+- Branch from current `main`. Update the branch with `git rebase main`, not by merging `main` into it.
+- Squash-merge the PR. Do not merge-commit.
+- One plan-shaped change per PR.
+
+Match the existing style: Summary, Scope (what this slice does **not** include), Verification (`ctest` and/or the Emscripten build). When a slice lands, mark **Current status** in the implementation plan — not here.
