@@ -4,6 +4,8 @@ Browser DX7/Dexed preset audition and Digitone II conversion. Not a Dexed clone.
 
 Read `README.md` and `docs/implementation-plan.md` before changing code. The plan is the product spec, including **Current status** and the next slice. This file is the operating contract: durable rules and how to work. Do not copy milestone accounting here.
 
+Preserve existing behaviour unless the task explicitly changes it. Keep diffs focused; do not refactor unrelated code.
+
 Update this file when layout, ABI, commands, or wiring facts change. Update the plan's Current status when a slice lands.
 
 ## Not yet wired
@@ -65,6 +67,8 @@ cmake --build build --config Release
 
 C++20, `-Wall -Wextra -Wpedantic`. Native tests are skipped when `EMSCRIPTEN` is set.
 
+Run the checks that match the change (native tests for mapper/engine/model, Emscripten for session/ABI/web). If a required command cannot run, report that command, the error, and what was not validated. Do not claim a full pass.
+
 ## WASM ABI lockstep
 
 Any ABI change must update all three in the same PR:
@@ -92,10 +96,19 @@ Working state lives in `ConversionContext`. Results are `ConversionResult { Digi
 
 ## C++ and tests
 
-- C++20, `#pragma once`, small objects with one job, British spelling already used in the mapper (`normalise`).
+- C++20, `#pragma once`, small objects with one job, British spelling already used in the mapper (`normalise`). Follow surrounding naming and formatting.
 - `DigitonePatch` holds hardware-facing parameters and ranges (algorithm 1–8, ratios 0.25–16, and so on). DSP-only state stays in `DigitoneEngine`.
 - Tests are standalone binaries with a local `expect()` helper and `main()`. Add a function and call it from `main`; do not add gtest/Catch2. Register new binaries on the `webxed_tests` umbrella target.
 - Converter tests must keep covering: determinism, source not mutated, all 32 DX algorithms, valid Digitone ranges, finite/bounded audio from a converted patch.
+
+## Audio path
+
+`DxEngine::renderSample()`, `DigitoneEngine::renderSample()`, and the WASM `_renderSample` export run on the audio path. Treat them as real-time:
+
+- Do not allocate, lock, or do file/network I/O inside `renderSample()`, `noteOn()`, or `noteOff()`.
+- Allocate buffers and initialise DSP in constructors / `loadPatch()`; conversion and SysEx parsing stay off the audio path.
+- Handle sample-rate at construction. Clamp parameters. Keep output finite and bounded.
+- Browser/DOM state is not the source of truth; `WebxedSession` owns loaded patches and the selected engine.
 
 ## Browser shell
 
@@ -109,8 +122,16 @@ Keys already in use: Left/Right = previous/next patch, Space and `D` = DX previe
 
 Rebase and squash. Keep `main` linear.
 
-- Branch from current `main`. Update the branch with `git rebase main`, not by merging `main` into it.
+- Branch from current `main` as `feature/<name>`, `fix/<name>`, `docs/<name>`, or `chore/<name>` unless another name is requested.
+- Update the branch with `git rebase main`, not by merging `main` into it.
 - Squash-merge the PR. Do not merge-commit.
-- One plan-shaped change per PR.
+- One plan-shaped change per PR. Do not stage unrelated local changes.
 
 Match the existing style: Summary, Scope (what this slice does **not** include), Verification (`ctest` and/or the Emscripten build). When a slice lands, mark **Current status** in the implementation plan — not here.
+
+## Definition of done
+
+- The requested behaviour is implemented without unrelated changes.
+- Native tests and/or the Emscripten build that match the change pass, or the gap is reported with command, error, and unvalidated scope.
+- ABI, session, and JS stay in lockstep when the boundary changes.
+- The summary lists changed behaviour, validation run, and known limitations.
