@@ -6,7 +6,7 @@
 
 #include "env.h"
 #include "fm_core.h"
-#include "model/DxPatch.h"
+#include "model/dx/DxPatch.h"
 
 class DxEngine {
 public:
