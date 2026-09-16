@@ -53,6 +53,7 @@ add_library(webxed_digitone STATIC
     src/model/digitone/DigitoneEnvelope.cpp
     src/model/digitone/DigitonePatch.cpp
     src/model/digitone/DigitoneTopology.cpp
+    src/serialization/ConversionJson.cpp
     src/serialization/digitone/DigitonePatchSerializer.cpp
     src/synth/digitone/DigitoneEnvelopeState.cpp
     src/synth/digitone/DigitoneOperator.cpp

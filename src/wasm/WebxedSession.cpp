@@ -1,8 +1,6 @@
 #include "wasm/WebxedSession.h"
 
-#include "serialization/digitone/DigitonePatchSerializer.h"
-
-#include <nlohmann/json.hpp>
+#include "serialization/ConversionJson.h"
 
 #include <span>
 
@@ -77,34 +75,7 @@ bool WebxedSession::convert() {
 }
 
 const char* WebxedSession::getConversionJson() {
-    using Json = nlohmann::json;
-
-    const DxPatch& source = patches[selectedPatch];
-    Json json = {
-        {"converted", converted},
-        {"source", {
-            {"name", source.getName()},
-            {"algorithm", source.getAlgorithm()}
-        }}
-    };
-
-    if (converted) {
-        json["target"] = {
-            {"name", conversion.patch.getName()},
-            {"algorithm", conversion.patch.getAlgorithm()}
-        };
-        json["report"] = {
-            {"removedOperators", conversion.report.removedOperators},
-            {"mergedOperators", conversion.report.mergedOperators},
-            {"selectedAlgorithm", conversion.report.selectedAlgorithm},
-            {"warnings", conversion.report.warnings},
-            {"ratioApproximationError", conversion.report.ratioApproximationError},
-            {"converterVersion", ConversionReport::converterVersion}
-        };
-        json["patch"] = Json::parse(DigitonePatchSerializer().serialize(conversion.patch));
-    }
-
-    jsonBuffer = json.dump();
+    jsonBuffer = ConversionJson::snapshot(converted, patches[selectedPatch], conversion);
     return jsonBuffer.c_str();
 }
 

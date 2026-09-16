@@ -37,8 +37,8 @@ DigitoneEnvelope deserializeEnvelope(const Json& json) {
 
 } // namespace
 
-std::string DigitonePatchSerializer::serialize(const DigitonePatch& patch) const {
-    const Json json = {
+nlohmann::json DigitonePatchSerializer::toJson(const DigitonePatch& patch) const {
+    return {
         {"format", formatName},
         {"version", currentVersion},
         {"name", patch.getName()},
@@ -58,8 +58,10 @@ std::string DigitonePatchSerializer::serialize(const DigitonePatch& patch) const
             {"b", serializeEnvelope(patch.getEnvelopeB())}
         }}
     };
+}
 
-    return json.dump(2);
+std::string DigitonePatchSerializer::serialize(const DigitonePatch& patch) const {
+    return toJson(patch).dump(2);
 }
 
 DigitonePatch DigitonePatchSerializer::deserialize(std::string_view value) const {
