@@ -88,11 +88,22 @@ Working state lives in `ConversionContext`. Results are `ConversionResult { Digi
 
 ## C++ and tests
 
-- C++20, `#pragma once`, small objects with one job, British spelling already used in the mapper (`normalise`). Follow surrounding naming and formatting.
-- Property accessors are `getX()`; mutators are `setX()`. DSP and session actions stay verbs (`reset`, `noteOn`, `convert`). The WASM C ABI names are unchanged.
+- C++20, `#pragma once`, small objects with one job, British spelling already used in the mapper (`normalise`). Follow surrounding naming and formatting except the function table below.
 - `DigitonePatch` holds hardware-facing parameters and ranges (algorithm 1–8, ratios 0.25–16, and so on). DSP-only state stays in `DigitoneEngine`.
 - Tests are standalone binaries with a local `expect()` helper and `main()`. Add a function and call it from `main`; do not add gtest/Catch2. Register new binaries on the `webxed_tests` umbrella target.
 - Converter tests must keep covering: determinism, source not mutated, all 32 DX algorithms, valid Digitone ranges, finite/bounded audio from a converted patch.
+
+Function names:
+
+| Kind | Form | Examples |
+| --- | --- | --- |
+| Property read | `getX()` | `getData()`, `getName()`, `getAlgorithm()`, `getMix()` |
+| Property write | `setX()` | `setName()`, `setMix()` |
+| DSP / session action | verb | `reset()`, `noteOn()`, `convert()`, `renderSample()`, `loadPatch()` |
+| WASM C ABI | unchanged | `patchCount`, `patchName`, `conversionJson` |
+| STL / buffers | unchanged | `vector.data()`, `span.data()` |
+
+A bool flag named reset is `getReset()`; `reset()` stays an action (`DigitoneOperator::reset`). Do not rename the C ABI to match C++ getters.
 
 ## Audio path
 
@@ -143,10 +154,11 @@ The review subagent flags if any of these fail:
 5. **Audio path** — allocate/lock/IO in `renderSample` / `noteOn` / `noteOff`; DOM used as engine source of truth.
 6. **Tests** — behaviour change without a native test (or without saying why); converter coverage dropped (determinism, no source mutation, 32 algorithms, ranges, finite audio); new test binary not on `webxed_tests`.
 7. **Git** — merge commits from `main`; files under `build/` committed.
+8. **Naming** — new or changed C++ property accessors not `getX()`/`setX()`; DSP or session verbs rewritten as get/set; WASM C ABI or STL `.data()` renamed.
 
-Do not nitpick style that matches the surrounding file. Suggest the smallest fix. Do not rewrite `DxDigitoneMapper` unless a test shows a heuristic bug. If the diff is large, say what was not inspected.
+Do not nitpick style that matches the surrounding file. Item 8 is not a nit. Suggest the smallest fix. Do not rewrite `DxDigitoneMapper` unless a test shows a heuristic bug. If the diff is large, say what was not inspected.
 
-Blocking: invariant, ABI, audio-path, or missing-test failures. The rest is optional.
+Blocking: invariant, ABI, audio-path, missing-test, or naming (item 8) failures. The rest is optional.
 
 ## After commit
 
