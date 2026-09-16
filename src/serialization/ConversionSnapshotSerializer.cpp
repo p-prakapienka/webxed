@@ -1,14 +1,10 @@
-#include "serialization/ConversionJson.h"
+#include "serialization/ConversionSnapshotSerializer.h"
 
 #include "serialization/digitone/DigitonePatchSerializer.h"
 
-#include <nlohmann/json.hpp>
-
 namespace {
 
-using Json = nlohmann::json;
-
-Json reportJson(const ConversionReport& report) {
+nlohmann::json reportJson(const ConversionReport& report) {
     return {
         {"removedOperators", report.removedOperators},
         {"mergedOperators", report.mergedOperators},
@@ -21,12 +17,12 @@ Json reportJson(const ConversionReport& report) {
 
 } // namespace
 
-std::string ConversionJson::snapshot(
+nlohmann::json ConversionSnapshotSerializer::toJson(
     bool converted,
     const DxPatch& source,
     const ConversionResult& conversion
-) {
-    Json json = {
+) const {
+    nlohmann::json json = {
         {"converted", converted},
         {"source", {
             {"name", source.getName()},
@@ -43,5 +39,13 @@ std::string ConversionJson::snapshot(
         json["patch"] = DigitonePatchSerializer().toJson(conversion.patch);
     }
 
-    return json.dump();
+    return json;
+}
+
+std::string ConversionSnapshotSerializer::serialize(
+    bool converted,
+    const DxPatch& source,
+    const ConversionResult& conversion
+) const {
+    return toJson(converted, source, conversion).dump();
 }

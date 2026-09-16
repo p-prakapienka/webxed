@@ -73,7 +73,7 @@ Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSyse
 
 `selectPreviewEngine`: `0` = DX, `1` = Digitone (only after a successful convert). Audition note is A4 (MIDI 69) unless the caller says otherwise.
 
-Conversion ABI is two functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `conversionJson` returns `ConversionJson::snapshot` (source/target names and algorithms, the report, and the nested `webxed-digitone-patch`). Do not grow a fat C API around mapper internals.
+Conversion ABI is two functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `conversionJson` returns `ConversionSnapshotSerializer` output (source/target names and algorithms, the report, and the nested `webxed-digitone-patch`). Do not grow a fat C API around mapper internals.
 
 ## Conversion pipeline
 

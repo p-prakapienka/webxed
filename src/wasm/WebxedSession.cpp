@@ -1,6 +1,6 @@
 #include "wasm/WebxedSession.h"
 
-#include "serialization/ConversionJson.h"
+#include "serialization/ConversionSnapshotSerializer.h"
 
 #include <span>
 
@@ -75,7 +75,7 @@ bool WebxedSession::convert() {
 }
 
 const char* WebxedSession::getConversionJson() {
-    jsonBuffer = ConversionJson::snapshot(converted, patches[selectedPatch], conversion);
+    jsonBuffer = ConversionSnapshotSerializer().serialize(converted, patches[selectedPatch], conversion);
     return jsonBuffer.c_str();
 }
 
