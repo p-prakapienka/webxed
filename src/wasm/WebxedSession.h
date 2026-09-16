@@ -16,12 +16,12 @@ public:
     explicit WebxedSession(double sampleRate);
 
     int loadSysex(const uint8_t* data, std::size_t size);
-    int patchCount() const;
-    const char* patchName(int index);
+    int getPatchCount() const;
+    const char* getPatchName(int index);
     bool selectPatch(int index);
     bool selectPreviewEngine(int engineIndex);
     bool convert();
-    const char* conversionJson();
+    const char* getConversionJson();
 
     void noteOn(int midiNote, double velocity);
     void noteOff();

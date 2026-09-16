@@ -11,9 +11,9 @@ public:
 
     explicit DxPatch(std::array<uint8_t, size> data);
 
-    const std::array<uint8_t, size>& data() const;
-    std::string name() const;
-    int algorithm() const;
+    const std::array<uint8_t, size>& getData() const;
+    std::string getName() const;
+    int getAlgorithm() const;
     static DxPatch initVoice();
 
 private:

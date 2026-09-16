@@ -13,13 +13,13 @@ constexpr const char* formatName = "webxed-digitone-patch";
 
 Json serializeEnvelope(const DigitoneEnvelope& envelope) {
     return {
-        {"attack", envelope.attack()},
-        {"decay", envelope.decay()},
-        {"endLevel", envelope.endLevel()},
-        {"level", envelope.level()},
-        {"delay", envelope.delay()},
-        {"triggered", envelope.triggered()},
-        {"reset", envelope.reset()}
+        {"attack", envelope.getAttack()},
+        {"decay", envelope.getDecay()},
+        {"endLevel", envelope.getEndLevel()},
+        {"level", envelope.getLevel()},
+        {"delay", envelope.getDelay()},
+        {"triggered", envelope.getTriggered()},
+        {"reset", envelope.getReset()}
     };
 }
 
@@ -41,21 +41,21 @@ std::string DigitonePatchSerializer::serialize(const DigitonePatch& patch) const
     const Json json = {
         {"format", formatName},
         {"version", currentVersion},
-        {"name", patch.name()},
-        {"algorithm", patch.algorithm()},
+        {"name", patch.getName()},
+        {"algorithm", patch.getAlgorithm()},
         {"ratios", {
-            {"c", patch.ratioC()},
-            {"a", patch.ratioA()},
-            {"b1", patch.ratioB1()},
-            {"b2", patch.ratioB2()}
+            {"c", patch.getRatioC()},
+            {"a", patch.getRatioA()},
+            {"b1", patch.getRatioB1()},
+            {"b2", patch.getRatioB2()}
         }},
-        {"harmonic", patch.harmonic()},
-        {"detune", patch.detune()},
-        {"feedback", patch.feedback()},
-        {"mix", patch.mix()},
+        {"harmonic", patch.getHarmonic()},
+        {"detune", patch.getDetune()},
+        {"feedback", patch.getFeedback()},
+        {"mix", patch.getMix()},
         {"envelopes", {
-            {"a", serializeEnvelope(patch.envelopeA())},
-            {"b", serializeEnvelope(patch.envelopeB())}
+            {"a", serializeEnvelope(patch.getEnvelopeA())},
+            {"b", serializeEnvelope(patch.getEnvelopeB())}
         }}
     };
 

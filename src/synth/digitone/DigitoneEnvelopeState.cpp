@@ -21,11 +21,11 @@ void DigitoneEnvelopeState::load(const DigitoneEnvelope& value) {
 }
 
 void DigitoneEnvelopeState::noteOn() {
-    if (envelope.reset()) {
+    if (envelope.getReset()) {
         value = 0.0;
     }
     stagePosition = 0;
-    stageLength = durationSamples(envelope.delay(), sampleRate, 4.0);
+    stageLength = durationSamples(envelope.getDelay(), sampleRate, 4.0);
     stageStartValue = value;
     stage = stageLength == 0 ? Stage::attack : Stage::delay;
     if (stage == Stage::attack) {
@@ -34,7 +34,7 @@ void DigitoneEnvelopeState::noteOn() {
 }
 
 void DigitoneEnvelopeState::noteOff() {
-    if (!envelope.triggered() && stage != Stage::idle && stage != Stage::end) {
+    if (!envelope.getTriggered() && stage != Stage::idle && stage != Stage::end) {
         startDecay();
     }
 }
@@ -51,7 +51,7 @@ double DigitoneEnvelopeState::renderSample() {
     case Stage::attack:
         advanceStage(1.0);
         if (stagePosition >= stageLength) {
-            if (envelope.triggered()) {
+            if (envelope.getTriggered()) {
                 startDecay();
             } else {
                 stage = Stage::sustain;
@@ -63,27 +63,27 @@ double DigitoneEnvelopeState::renderSample() {
         value = 1.0;
         break;
     case Stage::decay:
-        advanceStage(static_cast<double>(envelope.endLevel()) / 127.0);
+        advanceStage(static_cast<double>(envelope.getEndLevel()) / 127.0);
         if (stagePosition >= stageLength) {
             stage = Stage::end;
-            value = static_cast<double>(envelope.endLevel()) / 127.0;
+            value = static_cast<double>(envelope.getEndLevel()) / 127.0;
         }
         break;
     case Stage::end:
-        value = static_cast<double>(envelope.endLevel()) / 127.0;
+        value = static_cast<double>(envelope.getEndLevel()) / 127.0;
         break;
     }
-    return value * static_cast<double>(envelope.level()) / 127.0;
+    return value * static_cast<double>(envelope.getLevel()) / 127.0;
 }
 
 void DigitoneEnvelopeState::startAttack() {
     stage = Stage::attack;
     stageStartValue = value;
     stagePosition = 0;
-    stageLength = durationSamples(envelope.attack(), sampleRate, 8.0);
+    stageLength = durationSamples(envelope.getAttack(), sampleRate, 8.0);
     if (stageLength == 0) {
         value = 1.0;
-        if (envelope.triggered()) {
+        if (envelope.getTriggered()) {
             startDecay();
         } else {
             stage = Stage::sustain;
@@ -95,9 +95,9 @@ void DigitoneEnvelopeState::startDecay() {
     stage = Stage::decay;
     stageStartValue = value;
     stagePosition = 0;
-    stageLength = durationSamples(envelope.decay(), sampleRate, 12.0);
+    stageLength = durationSamples(envelope.getDecay(), sampleRate, 12.0);
     if (stageLength == 0) {
-        value = static_cast<double>(envelope.endLevel()) / 127.0;
+        value = static_cast<double>(envelope.getEndLevel()) / 127.0;
         stage = Stage::end;
     }
 }

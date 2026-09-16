@@ -22,7 +22,7 @@ DxPatch patchWith(std::array<uint8_t, DxPatch::size> bytes) {
 }
 
 std::array<uint8_t, DxPatch::size> initBytes() {
-    return DxPatch::initVoice().data();
+    return DxPatch::initVoice().getData();
 }
 
 void setOperator(std::array<uint8_t, DxPatch::size>& bytes, int op, int outputLevel, int mode, int coarse, int fine) {
@@ -34,14 +34,14 @@ void setOperator(std::array<uint8_t, DxPatch::size>& bytes, int op, int outputLe
 }
 
 void expectValidPatch(const DigitonePatch& patch) {
-    expect(patch.algorithm() >= 1 && patch.algorithm() <= 8, "converted algorithm in range");
-    for (double ratio : {patch.ratioC(), patch.ratioA(), patch.ratioB1(), patch.ratioB2()}) {
+    expect(patch.getAlgorithm() >= 1 && patch.getAlgorithm() <= 8, "converted algorithm in range");
+    for (double ratio : {patch.getRatioC(), patch.getRatioA(), patch.getRatioB1(), patch.getRatioB2()}) {
         expect(std::isfinite(ratio), "ratio finite");
         expect(ratio >= 0.25 && ratio <= 16.0, "ratio in range");
     }
-    expect(patch.detune() >= 0 && patch.detune() <= 127, "detune in range");
-    expect(patch.feedback() >= 0 && patch.feedback() <= 127, "feedback in range");
-    expect(patch.mix() >= -64 && patch.mix() <= 63, "mix in range");
+    expect(patch.getDetune() >= 0 && patch.getDetune() <= 127, "detune in range");
+    expect(patch.getFeedback() >= 0 && patch.getFeedback() <= 127, "feedback in range");
+    expect(patch.getMix() >= -64 && patch.getMix() <= 63, "mix in range");
 }
 
 void conversionIsDeterministic() {
@@ -56,10 +56,10 @@ void conversionIsDeterministic() {
 
 void sourceIsNotMutated() {
     const DxPatch source = DxPatch::initVoice();
-    const auto before = source.data();
+    const auto before = source.getData();
     DxDigitoneMapper converter;
     converter.convert(source);
-    expect(source.data() == before, "conversion must not mutate the source patch");
+    expect(source.getData() == before, "conversion must not mutate the source patch");
 }
 
 void initVoiceKeepsLoudestOperator() {
@@ -92,12 +92,12 @@ void feedbackMapsProportionally() {
     auto silent = initBytes();
     silent[135] = 0;
     DxDigitoneMapper converter;
-    expect(converter.convert(patchWith(silent)).patch.feedback() == 0, "zero feedback maps to zero");
+    expect(converter.convert(patchWith(silent)).patch.getFeedback() == 0, "zero feedback maps to zero");
 
     auto full = initBytes();
     full[135] = 7;
     const ConversionResult result = converter.convert(patchWith(full));
-    expect(result.patch.feedback() == 127, "maximum DX feedback maps to maximum Digitone feedback");
+    expect(result.patch.getFeedback() == 127, "maximum DX feedback maps to maximum Digitone feedback");
 }
 
 void exactRatiosHaveNoError() {
@@ -108,10 +108,10 @@ void exactRatiosHaveNoError() {
     }
     DxDigitoneMapper converter;
     const ConversionResult result = converter.convert(patchWith(bytes));
-    expect(result.patch.ratioC() == 1.0, "exact ratio preserved");
-    expect(result.patch.ratioA() == 1.0, "exact ratio preserved");
-    expect(result.patch.ratioB1() == 1.0, "exact ratio preserved");
-    expect(result.patch.ratioB2() == 1.0, "exact ratio preserved");
+    expect(result.patch.getRatioC() == 1.0, "exact ratio preserved");
+    expect(result.patch.getRatioA() == 1.0, "exact ratio preserved");
+    expect(result.patch.getRatioB1() == 1.0, "exact ratio preserved");
+    expect(result.patch.getRatioB2() == 1.0, "exact ratio preserved");
     expect(result.report.ratioApproximationError == 0.0, "no approximation error for exact ratios");
 }
 
@@ -141,7 +141,7 @@ void envelopeAttackFollowsDxRate() {
     DxDigitoneMapper converter;
     const ConversionResult fast = converter.convert(patchWith(fastBytes));
     const ConversionResult slow = converter.convert(patchWith(slowBytes));
-    expect(fast.patch.envelopeA().attack() < slow.patch.envelopeA().attack(), "faster DX rate must give shorter attack");
+    expect(fast.patch.getEnvelopeA().getAttack() < slow.patch.getEnvelopeA().getAttack(), "faster DX rate must give shorter attack");
 }
 
 void envelopeTriggerFollowsSustainLevel() {
@@ -152,8 +152,8 @@ void envelopeTriggerFollowsSustainLevel() {
     sustained[6] = 99;
 
     DxDigitoneMapper converter;
-    expect(converter.convert(patchWith(percussive)).patch.envelopeA().triggered(), "zero sustain must trigger decay");
-    expect(!converter.convert(patchWith(sustained)).patch.envelopeA().triggered(), "sustain level must hold");
+    expect(converter.convert(patchWith(percussive)).patch.getEnvelopeA().getTriggered(), "zero sustain must trigger decay");
+    expect(!converter.convert(patchWith(sustained)).patch.getEnvelopeA().getTriggered(), "sustain level must hold");
 }
 
 void convertedPatchRendersFiniteAudio() {

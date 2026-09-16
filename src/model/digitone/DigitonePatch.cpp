@@ -4,51 +4,51 @@
 #include <stdexcept>
 #include <utility>
 
-const std::string& DigitonePatch::name() const {
+const std::string& DigitonePatch::getName() const {
     return nameValue;
 }
 
-int DigitonePatch::algorithm() const {
+int DigitonePatch::getAlgorithm() const {
     return algorithmValue;
 }
 
-double DigitonePatch::ratioC() const {
+double DigitonePatch::getRatioC() const {
     return ratioCValue;
 }
 
-double DigitonePatch::ratioA() const {
+double DigitonePatch::getRatioA() const {
     return ratioAValue;
 }
 
-double DigitonePatch::ratioB1() const {
+double DigitonePatch::getRatioB1() const {
     return ratioB1Value;
 }
 
-double DigitonePatch::ratioB2() const {
+double DigitonePatch::getRatioB2() const {
     return ratioB2Value;
 }
 
-double DigitonePatch::harmonic() const {
+double DigitonePatch::getHarmonic() const {
     return harmonicValue;
 }
 
-int DigitonePatch::detune() const {
+int DigitonePatch::getDetune() const {
     return detuneValue;
 }
 
-int DigitonePatch::feedback() const {
+int DigitonePatch::getFeedback() const {
     return feedbackValue;
 }
 
-int DigitonePatch::mix() const {
+int DigitonePatch::getMix() const {
     return mixValue;
 }
 
-const DigitoneEnvelope& DigitonePatch::envelopeA() const {
+const DigitoneEnvelope& DigitonePatch::getEnvelopeA() const {
     return envelopeAValue;
 }
 
-const DigitoneEnvelope& DigitonePatch::envelopeB() const {
+const DigitoneEnvelope& DigitonePatch::getEnvelopeB() const {
     return envelopeBValue;
 }
 

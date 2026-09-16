@@ -24,7 +24,7 @@ std::vector<uint8_t> singleVoiceSysex(const DxPatch& patch) {
     bytes[3] = 0x00;
     bytes[4] = 1;
     bytes[5] = 27;
-    const auto& data = patch.data();
+    const auto& data = patch.getData();
     std::copy(data.begin(), data.begin() + 155, bytes.begin() + 6);
 
     uint32_t sum = 0;
@@ -38,14 +38,14 @@ std::vector<uint8_t> singleVoiceSysex(const DxPatch& patch) {
 
 void convertWiresMapperAndLeavesSourceUnchanged() {
     WebxedSession session(44100.0);
-    const std::string sourceName = session.patchName(0);
+    const std::string sourceName = session.getPatchName(0);
 
     expect(!session.selectPreviewEngine(1), "digitone preview requires convert");
     expect(session.convert(), "convert succeeds on init voice");
     expect(session.selectPreviewEngine(1), "digitone preview after convert");
-    expect(session.patchName(0) == sourceName, "convert must not change the source name");
+    expect(session.getPatchName(0) == sourceName, "convert must not change the source name");
 
-    const auto json = nlohmann::json::parse(session.conversionJson());
+    const auto json = nlohmann::json::parse(session.getConversionJson());
     expect(json.at("converted").get<bool>(), "conversionJson reports converted");
     expect(json.at("source").at("name").get<std::string>() == sourceName, "source name preserved");
     expect(json.at("source").at("algorithm").get<int>() == 32, "init voice is DX algorithm 32");
@@ -74,12 +74,12 @@ void loadSysexClearsConversion() {
     WebxedSession session(44100.0);
     expect(session.convert(), "convert");
     expect(session.selectPatch(0), "reselecting the same patch keeps conversion");
-    expect(nlohmann::json::parse(session.conversionJson()).at("converted").get<bool>(),
+    expect(nlohmann::json::parse(session.getConversionJson()).at("converted").get<bool>(),
         "same patch still converted");
 
     const auto sysex = singleVoiceSysex(DxPatch::initVoice());
     expect(session.loadSysex(sysex.data(), sysex.size()) == 1, "reload single-voice sysex");
-    expect(!nlohmann::json::parse(session.conversionJson()).at("converted").get<bool>(),
+    expect(!nlohmann::json::parse(session.getConversionJson()).at("converted").get<bool>(),
         "loadSysex clears conversion");
     expect(!session.selectPreviewEngine(1), "digitone preview disabled until convert");
 }
@@ -89,8 +89,8 @@ void convertIsDeterministic() {
     WebxedSession second(44100.0);
     expect(first.convert(), "first convert");
     expect(second.convert(), "second convert");
-    const auto left = nlohmann::json::parse(first.conversionJson());
-    const auto right = nlohmann::json::parse(second.conversionJson());
+    const auto left = nlohmann::json::parse(first.getConversionJson());
+    const auto right = nlohmann::json::parse(second.getConversionJson());
     expect(left.at("patch") == right.at("patch"), "session convert is deterministic");
     expect(left.at("report").at("selectedAlgorithm") == right.at("report").at("selectedAlgorithm"),
         "report algorithm deterministic");

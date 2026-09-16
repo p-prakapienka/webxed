@@ -23,16 +23,16 @@ int WebxedSession::loadSysex(const uint8_t* data, std::size_t size) {
     }
 }
 
-int WebxedSession::patchCount() const {
+int WebxedSession::getPatchCount() const {
     return static_cast<int>(patches.size());
 }
 
-const char* WebxedSession::patchName(int index) {
+const char* WebxedSession::getPatchName(int index) {
     if (index < 0 || static_cast<std::size_t>(index) >= patches.size()) {
         nameBuffer.clear();
         return nameBuffer.c_str();
     }
-    nameBuffer = patches[static_cast<std::size_t>(index)].name();
+    nameBuffer = patches[static_cast<std::size_t>(index)].getName();
     return nameBuffer.c_str();
 }
 
@@ -76,22 +76,22 @@ bool WebxedSession::convert() {
     return true;
 }
 
-const char* WebxedSession::conversionJson() {
+const char* WebxedSession::getConversionJson() {
     using Json = nlohmann::json;
 
     const DxPatch& source = patches[selectedPatch];
     Json json = {
         {"converted", converted},
         {"source", {
-            {"name", source.name()},
-            {"algorithm", source.algorithm()}
+            {"name", source.getName()},
+            {"algorithm", source.getAlgorithm()}
         }}
     };
 
     if (converted) {
         json["target"] = {
-            {"name", conversion.patch.name()},
-            {"algorithm", conversion.patch.algorithm()}
+            {"name", conversion.patch.getName()},
+            {"algorithm", conversion.patch.getAlgorithm()}
         };
         json["report"] = {
             {"removedOperators", conversion.report.removedOperators},

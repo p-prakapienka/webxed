@@ -26,7 +26,7 @@ void EnvelopeMapper::map(ConversionContext& context) {
         const int decay = std::clamp(((99 - slowestDecayRate) * 127 + 49) / 99, 0, 127);
         const int endLevel = std::clamp((view.levels[2] * 127 + 49) / 99, 0, 127);
         const bool triggered = view.levels[2] == 0;
-        DigitoneEnvelope envelope = group == 0 ? context.target.envelopeA() : context.target.envelopeB();
+        DigitoneEnvelope envelope = group == 0 ? context.target.getEnvelopeA() : context.target.getEnvelopeB();
         envelope.setAttack(attack);
         envelope.setDecay(decay);
         envelope.setEndLevel(endLevel);

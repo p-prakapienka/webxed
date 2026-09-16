@@ -23,7 +23,7 @@ double OperatorReducer::idealRatio(const OperatorView& op) {
 
 void OperatorReducer::analyze(ConversionContext& context, const DxPatch& source) {
     context.sourcePatch = &source;
-    context.sourceBytes = source.data();
+    context.sourceBytes = source.getData();
     context.dxAlgorithm = context.sourceBytes[134] & 31;
     context.dxFeedback = context.sourceBytes[135] & 7;
     context.feedbackOp = -1;

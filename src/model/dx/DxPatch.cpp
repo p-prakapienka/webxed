@@ -5,11 +5,11 @@
 
 DxPatch::DxPatch(std::array<uint8_t, DxPatch::size> data) : values(data) {}
 
-const std::array<uint8_t, DxPatch::size>& DxPatch::data() const {
+const std::array<uint8_t, DxPatch::size>& DxPatch::getData() const {
     return values;
 }
 
-std::string DxPatch::name() const {
+std::string DxPatch::getName() const {
     std::string result(values.begin() + 145, values.begin() + 155);
     while (!result.empty() && result.back() == ' ') {
         result.pop_back();
@@ -17,7 +17,7 @@ std::string DxPatch::name() const {
     return result;
 }
 
-int DxPatch::algorithm() const {
+int DxPatch::getAlgorithm() const {
     return static_cast<int>(values[134]) + 1;
 }
 

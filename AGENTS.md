@@ -89,6 +89,7 @@ Working state lives in `ConversionContext`. Results are `ConversionResult { Digi
 ## C++ and tests
 
 - C++20, `#pragma once`, small objects with one job, British spelling already used in the mapper (`normalise`). Follow surrounding naming and formatting.
+- Property accessors are `getX()`; mutators are `setX()`. DSP and session actions stay verbs (`reset`, `noteOn`, `convert`). The WASM C ABI names are unchanged.
 - `DigitonePatch` holds hardware-facing parameters and ranges (algorithm 1–8, ratios 0.25–16, and so on). DSP-only state stays in `DigitoneEngine`.
 - Tests are standalone binaries with a local `expect()` helper and `main()`. Add a function and call it from `main`; do not add gtest/Catch2. Register new binaries on the `webxed_tests` umbrella target.
 - Converter tests must keep covering: determinism, source not mutated, all 32 DX algorithms, valid Digitone ranges, finite/bounded audio from a converted patch.

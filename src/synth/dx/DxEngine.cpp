@@ -28,7 +28,7 @@ DxEngine::DxEngine(double sampleRate)
 
 void DxEngine::loadPatch(const DxPatch& patch) {
     this->patch = patch;
-    const auto& values = this->patch.data();
+    const auto& values = this->patch.getData();
     algorithm = values[134] & 31;
     const int feedback = values[135] & 7;
     feedbackShift = feedback != 0 ? 8 - feedback : 16;
@@ -64,7 +64,7 @@ double DxEngine::renderSample() {
 }
 
 void DxEngine::configureOperator(std::size_t operatorIndex, int midiNote) {
-    const auto& values = patch.data();
+    const auto& values = patch.getData();
     const std::size_t offset = operatorIndex * 21;
 
     int rates[4];
@@ -100,7 +100,7 @@ void DxEngine::renderBlock() {
 }
 
 double DxEngine::operatorFrequency(std::size_t operatorIndex, double noteFrequency) const {
-    const auto& values = patch.data();
+    const auto& values = patch.getData();
     const std::size_t offset = operatorIndex * 21;
     const int mode = values[offset + 17];
     const int coarse = values[offset + 18] & 31;

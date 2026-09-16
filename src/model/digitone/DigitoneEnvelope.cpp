@@ -21,31 +21,31 @@ DigitoneEnvelope::DigitoneEnvelope(
     setReset(reset);
 }
 
-int DigitoneEnvelope::attack() const {
+int DigitoneEnvelope::getAttack() const {
     return attackValue;
 }
 
-int DigitoneEnvelope::decay() const {
+int DigitoneEnvelope::getDecay() const {
     return decayValue;
 }
 
-int DigitoneEnvelope::endLevel() const {
+int DigitoneEnvelope::getEndLevel() const {
     return endLevelValue;
 }
 
-int DigitoneEnvelope::level() const {
+int DigitoneEnvelope::getLevel() const {
     return levelValue;
 }
 
-int DigitoneEnvelope::delay() const {
+int DigitoneEnvelope::getDelay() const {
     return delayValue;
 }
 
-bool DigitoneEnvelope::triggered() const {
+bool DigitoneEnvelope::getTriggered() const {
     return triggeredValue;
 }
 
-bool DigitoneEnvelope::reset() const {
+bool DigitoneEnvelope::getReset() const {
     return resetValue;
 }
 
