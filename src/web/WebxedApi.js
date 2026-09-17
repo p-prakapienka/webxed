@@ -8,7 +8,7 @@ class WebxedApi {
         this.selectPatchNative = module.cwrap('selectPatch', 'number', ['number', 'number']);
         this.selectPreviewEngineNative = module.cwrap('selectPreviewEngine', 'number', ['number', 'number']);
         this.convertNative = module.cwrap('convert', 'number', ['number']);
-        this.applyDigitoneJsonNative = module.cwrap('applyDigitoneJson', 'number', ['number', 'string']);
+        this.loadPatchNative = module.cwrap('loadPatch', 'number', ['number', 'string']);
         this.conversionJsonNative = module.cwrap('conversionJson', 'string', ['number']);
         this.noteOnNative = module.cwrap('noteOn', null, ['number', 'number', 'number']);
         this.noteOffNative = module.cwrap('noteOff', null, ['number']);
@@ -49,8 +49,8 @@ class WebxedApi {
         return this.convertNative(session) === 1;
     }
 
-    applyDigitoneJson(session, json) {
-        return this.applyDigitoneJsonNative(session, json) === 1;
+    loadPatch(session, json) {
+        return this.loadPatchNative(session, json) === 1;
     }
 
     conversionJson(session) {

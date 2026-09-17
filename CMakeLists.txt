@@ -142,6 +142,6 @@ if(EMSCRIPTEN)
         "-sALLOW_MEMORY_GROWTH=1"
         "-sNO_EXIT_RUNTIME=1"
         "-sEXPORTED_RUNTIME_METHODS=['cwrap']"
-        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_selectPreviewEngine','_convert','_applyDigitoneJson','_conversionJson','_noteOn','_noteOff','_renderSample']"
+        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_selectPreviewEngine','_convert','_loadPatch','_conversionJson','_noteOn','_noteOff','_renderSample']"
     )
 endif()
