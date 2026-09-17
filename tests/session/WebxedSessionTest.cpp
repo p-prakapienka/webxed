@@ -96,9 +96,9 @@ void convertIsDeterministic() {
         "report algorithm deterministic");
 }
 
-void applyDigitoneJsonUpdatesConvertedPatchWithoutTouchingSource() {
+void loadPatchUpdatesConvertedPatchWithoutTouchingSource() {
     WebxedSession session(44100.0);
-    expect(!session.applyDigitoneJson("{}"), "apply requires a converted patch");
+    expect(!session.loadPatch("{}"), "loadPatch requires a converted patch");
     expect(session.convert(), "convert");
     const auto before = nlohmann::json::parse(session.getConversionJson());
     const std::string sourceName = before.at("source").at("name").get<std::string>();
@@ -109,7 +109,7 @@ void applyDigitoneJsonUpdatesConvertedPatchWithoutTouchingSource() {
     patch["ratios"]["c"] = 4.0;
     patch["mix"] = 12;
     patch["name"] = "EDITED DN";
-    expect(session.applyDigitoneJson(patch.dump().c_str()), "valid edited patch applies");
+    expect(session.loadPatch(patch.dump().c_str()), "valid edited patch loads");
 
     const auto after = nlohmann::json::parse(session.getConversionJson());
     expect(after.at("converted").get<bool>(), "edit keeps conversion");
@@ -122,10 +122,10 @@ void applyDigitoneJsonUpdatesConvertedPatchWithoutTouchingSource() {
     expect(after.at("patch").at("mix").get<int>() == 12, "mix follows edit");
     expect(session.selectPreviewEngine(1), "digitone preview still available after edit");
 
-    expect(!session.applyDigitoneJson("{\"format\":\"nope\"}"), "invalid json is rejected");
+    expect(!session.loadPatch("{\"format\":\"nope\"}"), "invalid json is rejected");
     const auto rejected = nlohmann::json::parse(session.getConversionJson());
     expect(rejected.at("patch").at("name").get<std::string>() == "EDITED DN",
-        "rejected apply must not mutate the converted patch");
+        "rejected loadPatch must not mutate the converted patch");
 }
 
 } // namespace
@@ -136,7 +136,7 @@ int main() {
         convertedAudioIsFinite();
         loadSysexClearsConversion();
         convertIsDeterministic();
-        applyDigitoneJsonUpdatesConvertedPatchWithoutTouchingSource();
+        loadPatchUpdatesConvertedPatchWithoutTouchingSource();
     } catch (const std::exception& exception) {
         std::cerr << exception.what() << '\n';
         return 1;
