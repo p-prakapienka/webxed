@@ -9,6 +9,7 @@ public:
     explicit DigitoneEnvelopeState(double sampleRate);
 
     void load(const DigitoneEnvelope& envelope);
+    void update(const DigitoneEnvelope& envelope);
     void noteOn();
     void noteOff();
     double renderSample();
