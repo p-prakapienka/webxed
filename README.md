@@ -8,7 +8,8 @@ Primary workflow:
 2. Preview the original patch with a DX-compatible engine.
 3. Convert it to a Digitone II-compatible four-operator approximation.
 4. Preview the converted patch and A/B against the source.
-5. Save `webxed-digitone-patch` JSON. Tweaking in a Digitone-style editor is the next slice.
+5. Tweak the converted Digitone patch in the editor.
+6. Save `webxed-digitone-patch` JSON. A local library is the next slice.
 
 The project intentionally prioritizes the conversion and A/B audition workflow over building a complete Dexed clone.
 
