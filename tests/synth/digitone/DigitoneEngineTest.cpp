@@ -92,6 +92,23 @@ void controlsChangeRenderedVoice() {
     }
     expect(difference > 1.0, "patch controls must affect rendered audio");
 }
+
+void liveLoadPatchKeepsVoice() {
+    DigitoneEngine engine(sampleRate);
+    engine.loadPatch(patchFor(1));
+    engine.noteOn(69, 1.0);
+    render(engine, 512);
+
+    auto edited = patchFor(1);
+    edited.setRatioC(4.0);
+    edited.setMix(20);
+    engine.loadPatch(edited);
+    const auto samples = render(engine, 512);
+    expect(peak(samples) > 0.001, "live loadPatch must keep a sounding voice");
+    for (double sample : samples) {
+        expect(std::isfinite(sample), "live loadPatch output must remain finite");
+    }
+}
 }
 
 int main() {
@@ -99,6 +116,7 @@ int main() {
         everyAlgorithmProducesFiniteAudio();
         noteOffReleasesVoice();
         controlsChangeRenderedVoice();
+        liveLoadPatchKeepsVoice();
     } catch (const std::exception& exception) {
         std::cerr << exception.what() << '\n';
         return 1;
