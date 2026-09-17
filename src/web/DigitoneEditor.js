@@ -119,7 +119,7 @@ class DigitoneEditor {
             }
         };
 
-        if (!this.api.applyDigitoneJson(this.session, JSON.stringify(patch))) {
+        if (!this.api.loadPatch(this.session, JSON.stringify(patch))) {
             this.elements.status.textContent = 'Edit rejected. Check parameter ranges.';
             this.refresh();
             return false;
