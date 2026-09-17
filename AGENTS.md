@@ -69,11 +69,11 @@ Any ABI change must update all three in the same PR:
 2. `EXPORTED_FUNCTIONS` (and runtime methods) in `CMakeLists.txt`
 3. `cwrap` + JS wrapper in `src/web/WebxedApi.js`
 
-Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_convert`, `_applyDigitoneJson`, `_conversionJson`, `_noteOn`, `_noteOff`, `_renderSample`.
+Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_convert`, `_loadPatch`, `_conversionJson`, `_noteOn`, `_noteOff`, `_renderSample`.
 
 `selectPreviewEngine`: `0` = DX, `1` = Digitone (only after a successful convert). Audition note is A4 (MIDI 69) unless the caller says otherwise.
 
-Conversion ABI is three functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `applyDigitoneJson` deserialises a `webxed-digitone-patch` into the converted `DigitonePatch` and reloads the engine (fails if nothing is converted, and does not mutate the source `DxPatch`); `conversionJson` returns `ConversionSnapshotSerializer` output (source/target names and algorithms, the report, and the nested `webxed-digitone-patch`). Do not grow a fat C API around mapper internals or individual Digitone knobs.
+Conversion ABI is three functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `loadPatch` deserialises a `webxed-digitone-patch` into the converted `DigitonePatch` and reloads the engine (fails if nothing is converted, and does not mutate the source `DxPatch`); `conversionJson` returns `ConversionSnapshotSerializer` output (source/target names and algorithms, the report, and the nested `webxed-digitone-patch`). Do not grow a fat C API around mapper internals or individual Digitone knobs.
 
 ## Conversion pipeline
 
@@ -101,7 +101,7 @@ Function names:
 | Property read | `getX()` | `getData()`, `getName()`, `getAlgorithm()`, `getMix()` |
 | Property write | `setX()` | `setName()`, `setMix()` |
 | DSP / session action | verb | `reset()`, `noteOn()`, `convert()`, `renderSample()`, `loadPatch()` |
-| WASM C ABI | unchanged | `patchCount`, `patchName`, `conversionJson` |
+| WASM C ABI | unchanged | `patchCount`, `patchName`, `conversionJson`, `loadPatch` |
 | STL / buffers | unchanged | `vector.data()`, `span.data()` |
 
 A bool flag named reset is `getReset()`; `reset()` stays an action (`DigitoneOperator::reset`). Do not rename the C ABI to match C++ getters.
