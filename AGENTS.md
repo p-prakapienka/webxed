@@ -8,6 +8,8 @@ Preserve existing behaviour unless the task explicitly changes it. Keep diffs fo
 
 Update this file when layout, ABI, commands, or wiring facts change. Update the plan's Current status when a slice lands.
 
+When GitHub Actions is reachable, check `ci.yml` for the branch or PR in play (status questions, after push, before calling a slice done). Report the latest run conclusion. If the check is unavailable, say so; do not invent a result.
+
 ## Non-negotiables
 
 - Keep `DxPatch` / `DxEngine` separate from `DigitonePatch` / `DigitoneEngine`. Reuse low-level FM parts only where it is clearly cheaper than duplication.
@@ -181,4 +183,5 @@ Keep going until the run is green. If the failure is infrastructure (runner, net
 - ABI, session, and JS stay in lockstep when the boundary changes.
 - A review subagent ran on the uncommitted diff before the commit; blocking findings were fixed or explicitly dismissed.
 - After push, the `ci.yml` run for that commit was watched to completion; failures were fixed on the same branch, or an infrastructure gap was reported.
+- Status answers and slice summaries include the latest `ci.yml` conclusion when Actions is reachable.
 - The summary lists changed behaviour, validation run, review outcome, CI result, and known limitations.
