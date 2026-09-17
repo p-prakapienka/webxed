@@ -7,6 +7,8 @@ class WebxedApi {
         this.patchNameNative = module.cwrap('patchName', 'string', ['number', 'number']);
         this.selectPatchNative = module.cwrap('selectPatch', 'number', ['number', 'number']);
         this.selectPreviewEngineNative = module.cwrap('selectPreviewEngine', 'number', ['number', 'number']);
+        this.convertNative = module.cwrap('convert', 'number', ['number']);
+        this.conversionJsonNative = module.cwrap('conversionJson', 'string', ['number']);
         this.noteOnNative = module.cwrap('noteOn', null, ['number', 'number', 'number']);
         this.noteOffNative = module.cwrap('noteOff', null, ['number']);
         this.renderSampleNative = module.cwrap('renderSample', 'number', ['number']);
@@ -40,6 +42,14 @@ class WebxedApi {
 
     selectPreviewEngine(session, engineIndex) {
         return this.selectPreviewEngineNative(session, engineIndex) === 1;
+    }
+
+    convert(session) {
+        return this.convertNative(session) === 1;
+    }
+
+    conversionJson(session) {
+        return this.conversionJsonNative(session);
     }
 
     noteOn(session, midiNote, velocity) {

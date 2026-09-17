@@ -23,8 +23,8 @@ DigitoneEngine::DigitoneEngine(double sampleRateValue)
 
 void DigitoneEngine::loadPatch(const DigitonePatch& value) {
     patch = value;
-    envelopeA.load(patch.envelopeA());
-    envelopeB.load(patch.envelopeB());
+    envelopeA.load(patch.getEnvelopeA());
+    envelopeB.load(patch.getEnvelopeB());
     configureOperators(midiNote);
     active = false;
 }
@@ -44,7 +44,7 @@ void DigitoneEngine::noteOn(int note, double noteVelocity) {
 void DigitoneEngine::noteOff() {
     envelopeA.noteOff();
     envelopeB.noteOff();
-    if (!patch.envelopeA().triggered() && !patch.envelopeB().triggered()) {
+    if (!patch.getEnvelopeA().getTriggered() && !patch.getEnvelopeB().getTriggered()) {
         active = false;
     }
 }
@@ -56,7 +56,7 @@ double DigitoneEngine::renderSample() {
 
     const double ampA = envelopeA.renderSample();
     const double ampB = envelopeB.renderSample();
-    const auto parents = parentsFor(patch.algorithm());
+    const auto parents = parentsFor(patch.getAlgorithm());
     OperatorArray modulation{};
     OperatorArray output{};
 
@@ -68,13 +68,13 @@ double DigitoneEngine::renderSample() {
         }
     }
 
-    const double mix = static_cast<double>(patch.mix() - DigitonePatch::mixMinimum)
+    const double mix = static_cast<double>(patch.getMix() - DigitonePatch::mixMinimum)
         / static_cast<double>(DigitonePatch::mixMaximum - DigitonePatch::mixMinimum);
     const double carrierLevel = (output[0] * ampA + output[1] * ampA * mix + output[2] * ampB * (1.0 - mix) + output[3] * ampB * 0.25);
     const double amplitude = 0.2 + 0.8 * velocity;
     const double result = std::clamp(carrierLevel * amplitude, -1.0, 1.0);
 
-    if (ampA <= 0.000001 && ampB <= 0.000001 && !patch.envelopeA().triggered() && !patch.envelopeB().triggered()) {
+    if (ampA <= 0.000001 && ampB <= 0.000001 && !patch.getEnvelopeA().getTriggered() && !patch.getEnvelopeB().getTriggered()) {
         active = false;
     }
     return result;
@@ -103,26 +103,26 @@ double DigitoneEngine::renderOperator(int index, const OperatorArray& phaseModul
     double ratio = 1.0;
     switch (index) {
     case 0:
-        ratio = patch.ratioC();
+        ratio = patch.getRatioC();
         break;
     case 1:
-        ratio = patch.ratioA();
+        ratio = patch.getRatioA();
         break;
     case 2:
-        ratio = patch.ratioB1();
+        ratio = patch.getRatioB1();
         break;
     case 3:
-        ratio = patch.ratioB2();
+        ratio = patch.getRatioB2();
         break;
     default:
         break;
     }
 
     operators[static_cast<std::size_t>(index)].setFrequency(midiFrequency(midiNote) * ratio);
-    operators[static_cast<std::size_t>(index)].setDetuneCents(static_cast<double>(patch.detune()) * 0.8);
-    operators[static_cast<std::size_t>(index)].setFeedback(index == 0 ? static_cast<double>(patch.feedback()) / 127.0 : 0.0);
+    operators[static_cast<std::size_t>(index)].setDetuneCents(static_cast<double>(patch.getDetune()) * 0.8);
+    operators[static_cast<std::size_t>(index)].setFeedback(index == 0 ? static_cast<double>(patch.getFeedback()) / 127.0 : 0.0);
     const double modulationIndex = std::clamp(phaseModulation[static_cast<std::size_t>(index)] * 2.5, -twoPi, twoPi);
-    return operators[static_cast<std::size_t>(index)].render(modulationIndex, patch.harmonic());
+    return operators[static_cast<std::size_t>(index)].render(modulationIndex, patch.getHarmonic());
 }
 
 void DigitoneEngine::configureOperators(int note) {
@@ -130,14 +130,14 @@ void DigitoneEngine::configureOperators(int note) {
     for (int index = 0; index < operatorCount; ++index) {
         double ratio = 1.0;
         switch (index) {
-        case 0: ratio = patch.ratioC(); break;
-        case 1: ratio = patch.ratioA(); break;
-        case 2: ratio = patch.ratioB1(); break;
-        case 3: ratio = patch.ratioB2(); break;
+        case 0: ratio = patch.getRatioC(); break;
+        case 1: ratio = patch.getRatioA(); break;
+        case 2: ratio = patch.getRatioB1(); break;
+        case 3: ratio = patch.getRatioB2(); break;
         default: break;
         }
         operators[static_cast<std::size_t>(index)].setFrequency(midiFrequency(midiNote) * ratio);
-        operators[static_cast<std::size_t>(index)].setDetuneCents(static_cast<double>(patch.detune()) * 0.8);
-        operators[static_cast<std::size_t>(index)].setFeedback(index == 0 ? static_cast<double>(patch.feedback()) / 127.0 : 0.0);
+        operators[static_cast<std::size_t>(index)].setDetuneCents(static_cast<double>(patch.getDetune()) * 0.8);
+        operators[static_cast<std::size_t>(index)].setFeedback(index == 0 ? static_cast<double>(patch.getFeedback()) / 127.0 : 0.0);
     }
 }

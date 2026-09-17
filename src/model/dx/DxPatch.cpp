@@ -3,13 +3,13 @@
 #include <algorithm>
 #include <string_view>
 
-DxPatch::DxPatch(std::array<uint8_t, size> data) : values(data) {}
+DxPatch::DxPatch(std::array<uint8_t, DxPatch::size> data) : values(data) {}
 
-const std::array<uint8_t, DxPatch::size>& DxPatch::data() const {
+const std::array<uint8_t, DxPatch::size>& DxPatch::getData() const {
     return values;
 }
 
-std::string DxPatch::name() const {
+std::string DxPatch::getName() const {
     std::string result(values.begin() + 145, values.begin() + 155);
     while (!result.empty() && result.back() == ' ') {
         result.pop_back();
@@ -17,8 +17,12 @@ std::string DxPatch::name() const {
     return result;
 }
 
+int DxPatch::getAlgorithm() const {
+    return static_cast<int>(values[134]) + 1;
+}
+
 DxPatch DxPatch::initVoice() {
-    std::array<uint8_t, size> patch{};
+    std::array<uint8_t, DxPatch::size> patch{};
 
     for (std::size_t op = 0; op < 6; ++op) {
         const std::size_t offset = op * 21;

@@ -1,11 +1,12 @@
 class PatchBrowser {
-    constructor(api, session, patchSelect, previousButton, nextButton, status) {
+    constructor(api, session, patchSelect, previousButton, nextButton, status, onSelect) {
         this.api = api;
         this.session = session;
         this.patchSelect = patchSelect;
         this.previousButton = previousButton;
         this.nextButton = nextButton;
         this.status = status;
+        this.onSelect = onSelect;
     }
 
     load(count) {
@@ -30,6 +31,7 @@ class PatchBrowser {
         this.patchSelect.selectedIndex = index;
         this.refreshNavigation();
         this.status.textContent = `Selected ${index + 1}/${this.patchSelect.options.length}: ${this.patchSelect.options[index].text}`;
+        this.onSelect?.();
         return true;
     }
 

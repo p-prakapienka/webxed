@@ -4,11 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Webxed</title>
+    <style>
+        body { font-family: sans-serif; max-width: 52rem; margin: 1.5rem auto; padding: 0 1rem; }
+        .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+        .compare article { border: 1px solid #ccc; padding: 0.75rem 1rem; }
+        .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; }
+        #warnings { margin: 0.5rem 0 1rem; }
+    </style>
 </head>
 <body>
     <main>
         <h1>Webxed</h1>
-        <p>Audition DX7 SysEx patches and the hand-authored Digitone target voice in the browser.</p>
+        <p>Load a DX7 SysEx bank, preview the source, convert to a Digitone approximation, A/B, and save JSON.</p>
 
         <button id="startButton" type="button">Start audio</button>
         <input id="sysexInput" type="file" accept=".syx,application/octet-stream" disabled>
@@ -20,8 +27,28 @@
         <button id="previousButton" type="button" disabled>Previous</button>
         <button id="nextButton" type="button" disabled>Next</button>
 
-        <button id="dxNoteButton" type="button" disabled>Play DX A4</button>
-        <button id="digitoneNoteButton" type="button" disabled>Play Digitone Init A4</button>
+        <section class="compare">
+            <article>
+                <h2>Source DX</h2>
+                <p id="sourceName">WEBXEDINIT</p>
+                <p id="sourceAlgorithm">Algorithm 32</p>
+                <button id="dxNoteButton" type="button" disabled>Play DX A4 (D)</button>
+            </article>
+            <article>
+                <h2>Target Digitone</h2>
+                <p id="targetName">Not converted</p>
+                <p id="targetAlgorithm">Algorithm —</p>
+                <button id="digitoneNoteButton" type="button" disabled>Play Digitone A4 (N)</button>
+            </article>
+        </section>
+
+        <div class="actions">
+            <button id="convertButton" type="button" disabled>Convert (C)</button>
+            <button id="saveButton" type="button" disabled>Save JSON (S)</button>
+        </div>
+        <ul id="warnings">
+            <li>Start audio, then convert the selected DX patch.</li>
+        </ul>
 
         <p id="status">Start audio to begin.</p>
     </main>
@@ -30,6 +57,7 @@
     <script src="./AudioEngine.js"></script>
     <script src="./PatchBrowser.js"></script>
     <script src="./SysexLoader.js"></script>
+    <script src="./ConversionPanel.js"></script>
     <script src="./app.js"></script>
 </body>
 </html>

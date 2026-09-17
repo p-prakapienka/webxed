@@ -19,18 +19,18 @@ public:
 
     DigitonePatch() = default;
 
-    const std::string& name() const;
-    int algorithm() const;
-    double ratioC() const;
-    double ratioA() const;
-    double ratioB1() const;
-    double ratioB2() const;
-    double harmonic() const;
-    int detune() const;
-    int feedback() const;
-    int mix() const;
-    const DigitoneEnvelope& envelopeA() const;
-    const DigitoneEnvelope& envelopeB() const;
+    const std::string& getName() const;
+    int getAlgorithm() const;
+    double getRatioC() const;
+    double getRatioA() const;
+    double getRatioB1() const;
+    double getRatioB2() const;
+    double getHarmonic() const;
+    int getDetune() const;
+    int getFeedback() const;
+    int getMix() const;
+    const DigitoneEnvelope& getEnvelopeA() const;
+    const DigitoneEnvelope& getEnvelopeB() const;
 
     void setName(std::string value);
     void setAlgorithm(int value);

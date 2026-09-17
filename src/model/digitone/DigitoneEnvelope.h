@@ -16,13 +16,13 @@ public:
         bool reset
     );
 
-    int attack() const;
-    int decay() const;
-    int endLevel() const;
-    int level() const;
-    int delay() const;
-    bool triggered() const;
-    bool reset() const;
+    int getAttack() const;
+    int getDecay() const;
+    int getEndLevel() const;
+    int getLevel() const;
+    int getDelay() const;
+    bool getTriggered() const;
+    bool getReset() const;
 
     void setAttack(int value);
     void setDecay(int value);

@@ -8,16 +8,6 @@ Preserve existing behaviour unless the task explicitly changes it. Keep diffs fo
 
 Update this file when layout, ABI, commands, or wiring facts change. Update the plan's Current status when a slice lands.
 
-## Not yet wired
-
-`DxDigitoneMapper` exists and is covered by native tests. The product still does not call it:
-
-- `WebxedSession` loads a hand-authored Digitone init voice, not a converted patch.
-- The WASM ABI has no convert / report / target-patch exports.
-- The browser Digitone button auditions that init voice.
-
-Do not reimplement conversion. Call `DxDigitoneMapper::convert(const DxPatch&)` and keep the source patch unchanged. Delete this section in the same PR that wires convert through session, WASM, and UI.
-
 ## Non-negotiables
 
 - Keep `DxPatch` / `DxEngine` separate from `DigitonePatch` / `DigitoneEngine`. Reuse low-level FM parts only where it is clearly cheaper than duplication.
@@ -39,7 +29,7 @@ All application source is under `src/`:
 | `src/synth` | `DxEngine` (MSFA) and `DigitoneEngine` (four-op preview) |
 | `src/parser` | DX7 SysEx (single voice and 32-voice packed bank) |
 | `src/mapper` | `DxDigitoneMapper` and staged helpers |
-| `src/serialization` | Versioned `webxed-digitone` JSON |
+| `src/serialization` | Versioned `webxed-digitone` JSON and conversion snapshots |
 | `src/wasm` | `WebxedSession` + thin C ABI |
 | `src/web` | Browser shell (classic scripts) |
 | `tests/` | Native regression tests, one `main` per binary |
@@ -79,11 +69,11 @@ Any ABI change must update all three in the same PR:
 2. `EXPORTED_FUNCTIONS` (and runtime methods) in `CMakeLists.txt`
 3. `cwrap` + JS wrapper in `src/web/WebxedApi.js`
 
-Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_noteOn`, `_noteOff`, `_renderSample`.
+Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_convert`, `_conversionJson`, `_noteOn`, `_noteOff`, `_renderSample`.
 
-`selectPreviewEngine`: `0` = DX, `1` = Digitone. Audition note is A4 (MIDI 69) unless the caller says otherwise.
+`selectPreviewEngine`: `0` = DX, `1` = Digitone (only after a successful convert). Audition note is A4 (MIDI 69) unless the caller says otherwise.
 
-When wiring conversion, add `WebxedSession` methods first, then one or two ABI functions (convert, report, serialized target). Do not grow a fat C API around mapper internals.
+Conversion ABI is two functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `conversionJson` returns `ConversionSnapshotSerializer` output (source/target names and algorithms, the report, and the nested `webxed-digitone-patch`). Do not grow a fat C API around mapper internals.
 
 ## Conversion pipeline
 
@@ -98,10 +88,23 @@ Working state lives in `ConversionContext`. Results are `ConversionResult { Digi
 
 ## C++ and tests
 
-- C++20, `#pragma once`, small objects with one job, British spelling already used in the mapper (`normalise`). Follow surrounding naming and formatting.
+- C++20, `#pragma once`, small objects with one job, British spelling already used in the mapper (`normalise`). Follow surrounding naming and formatting except the function table and object rule below.
+- Objects can be stateless. Public work is instance methods (`DigitonePatchSerializer().serialize(patch)`, `ConversionSnapshotSerializer().serialize(...)`, `DxSysexParser().parse(bytes)`). Do not use a static-only class or free-function bag for that job. `static` is for constants, factories (`DxPatch::initVoice`), and private helpers.
 - `DigitonePatch` holds hardware-facing parameters and ranges (algorithm 1–8, ratios 0.25–16, and so on). DSP-only state stays in `DigitoneEngine`.
 - Tests are standalone binaries with a local `expect()` helper and `main()`. Add a function and call it from `main`; do not add gtest/Catch2. Register new binaries on the `webxed_tests` umbrella target.
 - Converter tests must keep covering: determinism, source not mutated, all 32 DX algorithms, valid Digitone ranges, finite/bounded audio from a converted patch.
+
+Function names:
+
+| Kind | Form | Examples |
+| --- | --- | --- |
+| Property read | `getX()` | `getData()`, `getName()`, `getAlgorithm()`, `getMix()` |
+| Property write | `setX()` | `setName()`, `setMix()` |
+| DSP / session action | verb | `reset()`, `noteOn()`, `convert()`, `renderSample()`, `loadPatch()` |
+| WASM C ABI | unchanged | `patchCount`, `patchName`, `conversionJson` |
+| STL / buffers | unchanged | `vector.data()`, `span.data()` |
+
+A bool flag named reset is `getReset()`; `reset()` stays an action (`DigitoneOperator::reset`). Do not rename the C ABI to match C++ getters.
 
 ## Audio path
 
@@ -114,9 +117,9 @@ Working state lives in `ConversionContext`. Results are `ConversionResult { Digi
 
 ## Browser shell
 
-`AudioEngine`, `PatchBrowser`, `SysexLoader`, `WebxedApi`, `app.js` — keep those responsibilities split.
+`AudioEngine`, `PatchBrowser`, `SysexLoader`, `ConversionPanel`, `WebxedApi`, `app.js` — keep those responsibilities split.
 
-Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview. The plan's A/B shortcuts also want `C` convert, `E` edit, `S` save; do not steal the existing keys.
+Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview (after convert), `C` convert, `S` save JSON. Leave `E` for the editor slice.
 
 `ScriptProcessorNode` is a known temporary audio path; do not treat replacing it as a prerequisite for the A/B loop.
 
@@ -145,17 +148,19 @@ This review is not CI and must not become a GitHub Actions job.
 
 The review subagent flags if any of these fail:
 
-1. **Scope** — work the plan defers; unrelated refactors; Digitone audition still the init voice when the change claims conversion is wired.
+1. **Scope** — work the plan defers; unrelated refactors; Digitone preview without a convert, or convert that does not call `DxDigitoneMapper`.
 2. **Models and engines** — `Dx*` and `Digitone*` mixed, or the source `DxPatch` mutated during convert.
 3. **Mapper** — stages flattened; DX algorithms number-mapped onto Digitone algorithms instead of graph matching.
 4. **ABI** — `WasmBridge.cpp`, `EXPORTED_FUNCTIONS`, and `WebxedApi.js` not updated together; fat C API around mapper internals; ES modules or a bundler in `src/web`.
 5. **Audio path** — allocate/lock/IO in `renderSample` / `noteOn` / `noteOff`; DOM used as engine source of truth.
 6. **Tests** — behaviour change without a native test (or without saying why); converter coverage dropped (determinism, no source mutation, 32 algorithms, ranges, finite audio); new test binary not on `webxed_tests`.
 7. **Git** — merge commits from `main`; files under `build/` committed.
+8. **Naming** — new or changed C++ property accessors not `getX()`/`setX()`; DSP or session verbs rewritten as get/set; WASM C ABI or STL `.data()` renamed.
+9. **Objects** — new public work as a static-only class or free-function bag instead of a (possibly stateless) object with instance methods.
 
-Do not nitpick style that matches the surrounding file. Suggest the smallest fix. Do not rewrite `DxDigitoneMapper` unless a test shows a heuristic bug. If the diff is large, say what was not inspected.
+Do not nitpick style that matches the surrounding file. Items 8 and 9 are not nits. Suggest the smallest fix. Do not rewrite `DxDigitoneMapper` unless a test shows a heuristic bug. If the diff is large, say what was not inspected.
 
-Blocking: invariant, ABI, audio-path, or missing-test failures. The rest is optional.
+Blocking: invariant, ABI, audio-path, missing-test, naming (item 8), or object-shape (item 9) failures. The rest is optional.
 
 ## After commit
 

@@ -24,8 +24,8 @@ void LevelMapper::map(ConversionContext& context) {
         groupLevel[static_cast<std::size_t>(group)] = std::max(groupLevel[static_cast<std::size_t>(group)], context.operators[static_cast<std::size_t>(dx)].outputLevel);
     }
 
-    DigitoneEnvelope envelopeA = context.target.envelopeA();
-    DigitoneEnvelope envelopeB = context.target.envelopeB();
+    DigitoneEnvelope envelopeA = context.target.getEnvelopeA();
+    DigitoneEnvelope envelopeB = context.target.getEnvelopeB();
     envelopeA.setLevel(std::clamp((groupLevel[0] * 127 + 49) / 99, 0, 127));
     envelopeB.setLevel(std::clamp((groupLevel[1] * 127 + 49) / 99, 0, 127));
     context.target.setEnvelopeA(envelopeA);

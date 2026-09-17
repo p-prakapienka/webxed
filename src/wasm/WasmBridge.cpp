@@ -20,11 +20,11 @@ int loadSysex(WebxedSession* session, const uint8_t* data, int size) {
 }
 
 int patchCount(WebxedSession* session) {
-    return session != nullptr ? session->patchCount() : 0;
+    return session != nullptr ? session->getPatchCount() : 0;
 }
 
 const char* patchName(WebxedSession* session, int index) {
-    return session != nullptr ? session->patchName(index) : "";
+    return session != nullptr ? session->getPatchName(index) : "";
 }
 
 int selectPatch(WebxedSession* session, int index) {
@@ -33,6 +33,14 @@ int selectPatch(WebxedSession* session, int index) {
 
 int selectPreviewEngine(WebxedSession* session, int engineIndex) {
     return session != nullptr && session->selectPreviewEngine(engineIndex) ? 1 : 0;
+}
+
+int convert(WebxedSession* session) {
+    return session != nullptr && session->convert() ? 1 : 0;
+}
+
+const char* conversionJson(WebxedSession* session) {
+    return session != nullptr ? session->getConversionJson() : "{}";
 }
 
 void noteOn(WebxedSession* session, int midiNote, double velocity) {

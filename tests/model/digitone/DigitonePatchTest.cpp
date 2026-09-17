@@ -42,16 +42,16 @@ DigitonePatch createPatch() {
 
 void defaultPatchUsesNeutralHardwareValues() {
     const DigitonePatch patch;
-    expect(patch.name() == "INIT", "default name");
-    expect(patch.algorithm() == 1, "default algorithm");
-    expect(patch.ratioC() == 1.0, "default C ratio");
-    expect(patch.ratioA() == 1.0, "default A ratio");
-    expect(patch.ratioB1() == 1.0, "default B1 ratio");
-    expect(patch.ratioB2() == 1.0, "default B2 ratio");
-    expect(patch.harmonic() == 0.0, "default harmonic");
-    expect(patch.detune() == 0, "default detune");
-    expect(patch.feedback() == 0, "default feedback");
-    expect(patch.mix() == 0, "default mix");
+    expect(patch.getName() == "INIT", "default name");
+    expect(patch.getAlgorithm() == 1, "default algorithm");
+    expect(patch.getRatioC() == 1.0, "default C ratio");
+    expect(patch.getRatioA() == 1.0, "default A ratio");
+    expect(patch.getRatioB1() == 1.0, "default B1 ratio");
+    expect(patch.getRatioB2() == 1.0, "default B2 ratio");
+    expect(patch.getHarmonic() == 0.0, "default harmonic");
+    expect(patch.getDetune() == 0, "default detune");
+    expect(patch.getFeedback() == 0, "default feedback");
+    expect(patch.getMix() == 0, "default mix");
 }
 
 void patchRoundTripsThroughVersionedJson() {
