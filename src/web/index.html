@@ -10,12 +10,16 @@
         .compare article { border: 1px solid #ccc; padding: 0.75rem 1rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; }
         #warnings { margin: 0.5rem 0 1rem; }
+        #editorPanel { border: 1px solid #ccc; padding: 0.75rem 1rem; margin: 1rem 0; }
+        #editorPanel .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.5rem 1rem; }
+        #editorPanel label { display: flex; flex-direction: column; font-size: 0.9rem; gap: 0.2rem; }
+        #editorPanel fieldset { margin: 0.75rem 0 0; }
     </style>
 </head>
 <body>
     <main>
         <h1>Webxed</h1>
-        <p>Load a DX7 SysEx bank, preview the source, convert to a Digitone approximation, A/B, and save JSON.</p>
+        <p>Load a DX7 SysEx bank, preview the source, convert to a Digitone approximation, A/B, tweak, and save JSON.</p>
 
         <button id="startButton" type="button">Start audio</button>
         <input id="sysexInput" type="file" accept=".syx,application/octet-stream" disabled>
@@ -44,11 +48,72 @@
 
         <div class="actions">
             <button id="convertButton" type="button" disabled>Convert (C)</button>
+            <button id="editButton" type="button" disabled>Edit (E)</button>
             <button id="saveButton" type="button" disabled>Save JSON (S)</button>
         </div>
         <ul id="warnings">
             <li>Start audio, then convert the selected DX patch.</li>
         </ul>
+
+        <section id="editorPanel" hidden>
+            <h2>Digitone editor</h2>
+            <form id="editorForm">
+                <div class="grid">
+                    <label>Name <input id="editName" type="text" maxlength="16"></label>
+                    <label>Algorithm
+                        <input id="editAlgorithm" type="number" min="1" max="8" step="1">
+                    </label>
+                    <label>Ratio C
+                        <input id="editRatioC" type="number" min="0.25" max="16" step="0.25">
+                    </label>
+                    <label>Ratio A
+                        <input id="editRatioA" type="number" min="0.25" max="16" step="0.25">
+                    </label>
+                    <label>Ratio B1
+                        <input id="editRatioB1" type="number" min="0.25" max="16" step="0.25">
+                    </label>
+                    <label>Ratio B2
+                        <input id="editRatioB2" type="number" min="0.25" max="16" step="0.25">
+                    </label>
+                    <label>HARM
+                        <input id="editHarmonic" type="number" min="-26" max="26" step="0.5">
+                    </label>
+                    <label>DETUNE
+                        <input id="editDetune" type="number" min="0" max="127" step="1">
+                    </label>
+                    <label>FEEDBACK
+                        <input id="editFeedback" type="number" min="0" max="127" step="1">
+                    </label>
+                    <label>MIX
+                        <input id="editMix" type="number" min="-64" max="63" step="1">
+                    </label>
+                </div>
+                <fieldset>
+                    <legend>Envelope A</legend>
+                    <div class="grid">
+                        <label>Attack <input id="editEnvAAttack" type="number" min="0" max="127" step="1"></label>
+                        <label>Decay <input id="editEnvADecay" type="number" min="0" max="127" step="1"></label>
+                        <label>End <input id="editEnvAEndLevel" type="number" min="0" max="127" step="1"></label>
+                        <label>Level <input id="editEnvALevel" type="number" min="0" max="127" step="1"></label>
+                        <label>Delay <input id="editEnvADelay" type="number" min="0" max="127" step="1"></label>
+                        <label>Triggered <input id="editEnvATriggered" type="checkbox"></label>
+                        <label>Reset <input id="editEnvAReset" type="checkbox"></label>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Envelope B</legend>
+                    <div class="grid">
+                        <label>Attack <input id="editEnvBAttack" type="number" min="0" max="127" step="1"></label>
+                        <label>Decay <input id="editEnvBDecay" type="number" min="0" max="127" step="1"></label>
+                        <label>End <input id="editEnvBEndLevel" type="number" min="0" max="127" step="1"></label>
+                        <label>Level <input id="editEnvBLevel" type="number" min="0" max="127" step="1"></label>
+                        <label>Delay <input id="editEnvBDelay" type="number" min="0" max="127" step="1"></label>
+                        <label>Triggered <input id="editEnvBTriggered" type="checkbox"></label>
+                        <label>Reset <input id="editEnvBReset" type="checkbox"></label>
+                    </div>
+                </fieldset>
+            </form>
+        </section>
 
         <p id="status">Start audio to begin.</p>
     </main>
@@ -58,6 +123,7 @@
     <script src="./PatchBrowser.js"></script>
     <script src="./SysexLoader.js"></script>
     <script src="./ConversionPanel.js"></script>
+    <script src="./DigitoneEditor.js"></script>
     <script src="./app.js"></script>
 </body>
 </html>
