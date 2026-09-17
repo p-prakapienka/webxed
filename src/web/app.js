@@ -4,6 +4,7 @@ const patchSelect = document.getElementById('patchSelect');
 const previousButton = document.getElementById('previousButton');
 const nextButton = document.getElementById('nextButton');
 const convertButton = document.getElementById('convertButton');
+const editButton = document.getElementById('editButton');
 const saveButton = document.getElementById('saveButton');
 const dxNoteButton = document.getElementById('dxNoteButton');
 const digitoneNoteButton = document.getElementById('digitoneNoteButton');
@@ -13,6 +14,24 @@ let audioEngine;
 let patchBrowser;
 let sysexLoader;
 let conversionPanel;
+let digitoneEditor;
+
+function envelopeFields(prefix) {
+    return {
+        attack: document.getElementById(`${prefix}Attack`),
+        decay: document.getElementById(`${prefix}Decay`),
+        endLevel: document.getElementById(`${prefix}EndLevel`),
+        level: document.getElementById(`${prefix}Level`),
+        delay: document.getElementById(`${prefix}Delay`),
+        triggered: document.getElementById(`${prefix}Triggered`),
+        reset: document.getElementById(`${prefix}Reset`)
+    };
+}
+
+function isEditableTarget(target) {
+    const tag = target && target.tagName;
+    return tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+}
 
 startButton.addEventListener('click', async () => {
     if (audioEngine) {
@@ -35,6 +54,24 @@ startButton.addEventListener('click', async () => {
         saveButton,
         status
     });
+    digitoneEditor = new DigitoneEditor(api, session, conversionPanel, {
+        panel: document.getElementById('editorPanel'),
+        form: document.getElementById('editorForm'),
+        editButton,
+        status,
+        name: document.getElementById('editName'),
+        algorithm: document.getElementById('editAlgorithm'),
+        ratioC: document.getElementById('editRatioC'),
+        ratioA: document.getElementById('editRatioA'),
+        ratioB1: document.getElementById('editRatioB1'),
+        ratioB2: document.getElementById('editRatioB2'),
+        harmonic: document.getElementById('editHarmonic'),
+        detune: document.getElementById('editDetune'),
+        feedback: document.getElementById('editFeedback'),
+        mix: document.getElementById('editMix'),
+        envelopeA: envelopeFields('editEnvA'),
+        envelopeB: envelopeFields('editEnvB')
+    });
     patchBrowser = new PatchBrowser(
         api,
         session,
@@ -42,7 +79,10 @@ startButton.addEventListener('click', async () => {
         previousButton,
         nextButton,
         status,
-        () => conversionPanel.refresh()
+        () => {
+            conversionPanel.refresh();
+            digitoneEditor.refresh();
+        }
     );
     sysexLoader = new SysexLoader(api, session, patchBrowser, status);
 
@@ -53,6 +93,7 @@ startButton.addEventListener('click', async () => {
     status.textContent = 'Audio ready. Load a .syx file or convert the DX init voice.';
     patchBrowser.refreshNavigation();
     conversionPanel.refresh();
+    digitoneEditor.refresh();
 });
 
 sysexInput.addEventListener('change', async event => {
@@ -60,13 +101,18 @@ sysexInput.addEventListener('change', async event => {
     if (file && sysexLoader) {
         await sysexLoader.load(file);
         conversionPanel?.refresh();
+        digitoneEditor?.refresh();
     }
 });
 
 patchSelect.addEventListener('change', () => patchBrowser?.select(patchSelect.selectedIndex));
 previousButton.addEventListener('click', () => patchBrowser?.previous());
 nextButton.addEventListener('click', () => patchBrowser?.next());
-convertButton.addEventListener('click', () => conversionPanel?.convert());
+convertButton.addEventListener('click', () => {
+    if (conversionPanel?.convert()) {
+        digitoneEditor?.refresh();
+    }
+});
 saveButton.addEventListener('click', () => conversionPanel?.save());
 
 dxNoteButton.addEventListener('pointerdown', () => {
@@ -86,7 +132,7 @@ digitoneNoteButton.addEventListener('pointerup', () => audioEngine?.noteOff());
 digitoneNoteButton.addEventListener('pointerleave', () => audioEngine?.noteOff());
 
 window.addEventListener('keydown', event => {
-    if (event.target === patchSelect || event.target === sysexInput) {
+    if (isEditableTarget(event.target) && event.target !== patchSelect) {
         return;
     }
 
@@ -108,7 +154,11 @@ window.addEventListener('keydown', event => {
             audioEngine.noteOn();
         }
     } else if (key === 'c' && !event.repeat) {
-        conversionPanel?.convert();
+        if (conversionPanel?.convert()) {
+            digitoneEditor?.refresh();
+        }
+    } else if (key === 'e' && !event.repeat) {
+        digitoneEditor?.toggle();
     } else if (key === 's' && !event.repeat) {
         event.preventDefault();
         conversionPanel?.save();
@@ -116,6 +166,10 @@ window.addEventListener('keydown', event => {
 });
 
 window.addEventListener('keyup', event => {
+    if (isEditableTarget(event.target) && event.target !== patchSelect) {
+        return;
+    }
+
     const key = event.key.toLowerCase();
     if (event.code === 'Space' || key === 'n' || key === 'd') {
         audioEngine?.noteOff();
