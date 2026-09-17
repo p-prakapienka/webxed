@@ -22,9 +22,8 @@ DigitoneEngine::DigitoneEngine(double sampleRateValue)
 }
 
 void DigitoneEngine::loadPatch(const DigitonePatch& value) {
-    const bool keepVoice = active;
     patch = value;
-    if (keepVoice) {
+    if (active) {
         envelopeA.update(patch.getEnvelopeA());
         envelopeB.update(patch.getEnvelopeB());
         configureOperators(midiNote);

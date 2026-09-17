@@ -75,7 +75,7 @@ bool WebxedSession::convert() {
     return true;
 }
 
-bool WebxedSession::applyDigitoneJson(const char* json) {
+bool WebxedSession::loadPatch(const char* json) {
     if (!converted || json == nullptr) {
         return false;
     }

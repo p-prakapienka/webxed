@@ -39,8 +39,8 @@ int convert(WebxedSession* session) {
     return session != nullptr && session->convert() ? 1 : 0;
 }
 
-int applyDigitoneJson(WebxedSession* session, const char* json) {
-    return session != nullptr && session->applyDigitoneJson(json) ? 1 : 0;
+int loadPatch(WebxedSession* session, const char* json) {
+    return session != nullptr && session->loadPatch(json) ? 1 : 0;
 }
 
 const char* conversionJson(WebxedSession* session) {
