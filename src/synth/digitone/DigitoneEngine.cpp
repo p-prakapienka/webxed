@@ -22,7 +22,15 @@ DigitoneEngine::DigitoneEngine(double sampleRateValue)
 }
 
 void DigitoneEngine::loadPatch(const DigitonePatch& value) {
+    const bool keepVoice = active;
     patch = value;
+    if (keepVoice) {
+        envelopeA.update(patch.getEnvelopeA());
+        envelopeB.update(patch.getEnvelopeB());
+        configureOperators(midiNote);
+        return;
+    }
+
     envelopeA.load(patch.getEnvelopeA());
     envelopeB.load(patch.getEnvelopeB());
     configureOperators(midiNote);
