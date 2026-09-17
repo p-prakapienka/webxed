@@ -21,6 +21,7 @@ public:
     bool selectPatch(int index);
     bool selectPreviewEngine(int engineIndex);
     bool convert();
+    bool loadPatch(const char* json);
     const char* getConversionJson();
 
     void noteOn(int midiNote, double velocity);

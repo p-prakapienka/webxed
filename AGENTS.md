@@ -8,6 +8,8 @@ Preserve existing behaviour unless the task explicitly changes it. Keep diffs fo
 
 Update this file when layout, ABI, commands, or wiring facts change. Update the plan's Current status when a slice lands.
 
+When GitHub Actions is reachable, check `ci.yml` for the branch or PR in play (status questions, after push, before calling a slice done). Report the latest run conclusion. If the check is unavailable, say so; do not invent a result.
+
 ## Non-negotiables
 
 - Keep `DxPatch` / `DxEngine` separate from `DigitonePatch` / `DigitoneEngine`. Reuse low-level FM parts only where it is clearly cheaper than duplication.
@@ -69,11 +71,11 @@ Any ABI change must update all three in the same PR:
 2. `EXPORTED_FUNCTIONS` (and runtime methods) in `CMakeLists.txt`
 3. `cwrap` + JS wrapper in `src/web/WebxedApi.js`
 
-Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_convert`, `_conversionJson`, `_noteOn`, `_noteOff`, `_renderSample`.
+Current exports: `_malloc`, `_free`, `_createSynth`, `_destroySynth`, `_loadSysex`, `_patchCount`, `_patchName`, `_selectPatch`, `_selectPreviewEngine`, `_convert`, `_loadPatch`, `_conversionJson`, `_noteOn`, `_noteOff`, `_renderSample`.
 
 `selectPreviewEngine`: `0` = DX, `1` = Digitone (only after a successful convert). Audition note is A4 (MIDI 69) unless the caller says otherwise.
 
-Conversion ABI is two functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `conversionJson` returns `ConversionSnapshotSerializer` output (source/target names and algorithms, the report, and the nested `webxed-digitone-patch`). Do not grow a fat C API around mapper internals.
+Conversion ABI is three functions: `convert` runs `DxDigitoneMapper::convert` on the selected source patch and loads the Digitone engine; `loadPatch` deserialises a `webxed-digitone-patch` into the converted `DigitonePatch` and reloads the engine (fails if nothing is converted, and does not mutate the source `DxPatch`); `conversionJson` returns `ConversionSnapshotSerializer` output (source/target names and algorithms, the report, and the nested `webxed-digitone-patch`). Do not grow a fat C API around mapper internals or individual Digitone knobs.
 
 ## Conversion pipeline
 
@@ -101,7 +103,7 @@ Function names:
 | Property read | `getX()` | `getData()`, `getName()`, `getAlgorithm()`, `getMix()` |
 | Property write | `setX()` | `setName()`, `setMix()` |
 | DSP / session action | verb | `reset()`, `noteOn()`, `convert()`, `renderSample()`, `loadPatch()` |
-| WASM C ABI | unchanged | `patchCount`, `patchName`, `conversionJson` |
+| WASM C ABI | unchanged | `patchCount`, `patchName`, `conversionJson`, `loadPatch` |
 | STL / buffers | unchanged | `vector.data()`, `span.data()` |
 
 A bool flag named reset is `getReset()`; `reset()` stays an action (`DigitoneOperator::reset`). Do not rename the C ABI to match C++ getters.
@@ -117,9 +119,9 @@ A bool flag named reset is `getReset()`; `reset()` stays an action (`DigitoneOpe
 
 ## Browser shell
 
-`AudioEngine`, `PatchBrowser`, `SysexLoader`, `ConversionPanel`, `WebxedApi`, `app.js` — keep those responsibilities split.
+`AudioEngine`, `PatchBrowser`, `SysexLoader`, `ConversionPanel`, `DigitoneEditor`, `WebxedApi`, `app.js` — keep those responsibilities split.
 
-Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview (after convert), `C` convert, `S` save JSON. Leave `E` for the editor slice.
+Keys already in use: Left/Right = previous/next patch, Space and `D` = DX preview, `N` = Digitone preview (after convert), `C` convert, `E` toggle Digitone editor (after convert), `S` save JSON.
 
 `ScriptProcessorNode` is a known temporary audio path; do not treat replacing it as a prerequisite for the A/B loop.
 
@@ -181,4 +183,5 @@ Keep going until the run is green. If the failure is infrastructure (runner, net
 - ABI, session, and JS stay in lockstep when the boundary changes.
 - A review subagent ran on the uncommitted diff before the commit; blocking findings were fixed or explicitly dismissed.
 - After push, the `ci.yml` run for that commit was watched to completion; failures were fixed on the same branch, or an infrastructure gap was reported.
+- Status answers and slice summaries include the latest `ci.yml` conclusion when Actions is reachable.
 - The summary lists changed behaviour, validation run, review outcome, CI result, and known limitations.

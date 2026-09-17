@@ -23,6 +23,13 @@ DigitoneEngine::DigitoneEngine(double sampleRateValue)
 
 void DigitoneEngine::loadPatch(const DigitonePatch& value) {
     patch = value;
+    if (active) {
+        envelopeA.update(patch.getEnvelopeA());
+        envelopeB.update(patch.getEnvelopeB());
+        configureOperators(midiNote);
+        return;
+    }
+
     envelopeA.load(patch.getEnvelopeA());
     envelopeB.load(patch.getEnvelopeB());
     configureOperators(midiNote);

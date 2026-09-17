@@ -20,6 +20,10 @@ void DigitoneEnvelopeState::load(const DigitoneEnvelope& value) {
     stageLength = 0;
 }
 
+void DigitoneEnvelopeState::update(const DigitoneEnvelope& value) {
+    envelope = value;
+}
+
 void DigitoneEnvelopeState::noteOn() {
     if (envelope.getReset()) {
         value = 0.0;

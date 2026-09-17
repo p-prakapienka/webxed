@@ -96,6 +96,38 @@ void convertIsDeterministic() {
         "report algorithm deterministic");
 }
 
+void loadPatchUpdatesConvertedPatchWithoutTouchingSource() {
+    WebxedSession session(44100.0);
+    expect(!session.loadPatch("{}"), "loadPatch requires a converted patch");
+    expect(session.convert(), "convert");
+    const auto before = nlohmann::json::parse(session.getConversionJson());
+    const std::string sourceName = before.at("source").at("name").get<std::string>();
+    const int sourceAlgorithm = before.at("source").at("algorithm").get<int>();
+
+    auto patch = before.at("patch");
+    patch["algorithm"] = patch.at("algorithm").get<int>() == 8 ? 1 : 8;
+    patch["ratios"]["c"] = 4.0;
+    patch["mix"] = 12;
+    patch["name"] = "EDITED DN";
+    expect(session.loadPatch(patch.dump().c_str()), "valid edited patch loads");
+
+    const auto after = nlohmann::json::parse(session.getConversionJson());
+    expect(after.at("converted").get<bool>(), "edit keeps conversion");
+    expect(after.at("source").at("name").get<std::string>() == sourceName, "source name unchanged");
+    expect(after.at("source").at("algorithm").get<int>() == sourceAlgorithm, "source algorithm unchanged");
+    expect(after.at("target").at("name").get<std::string>() == "EDITED DN", "target name follows edit");
+    expect(after.at("target").at("algorithm").get<int>() == patch.at("algorithm").get<int>(),
+        "target algorithm follows edit");
+    expect(after.at("patch").at("ratios").at("c").get<double>() == 4.0, "ratio C follows edit");
+    expect(after.at("patch").at("mix").get<int>() == 12, "mix follows edit");
+    expect(session.selectPreviewEngine(1), "digitone preview still available after edit");
+
+    expect(!session.loadPatch("{\"format\":\"nope\"}"), "invalid json is rejected");
+    const auto rejected = nlohmann::json::parse(session.getConversionJson());
+    expect(rejected.at("patch").at("name").get<std::string>() == "EDITED DN",
+        "rejected loadPatch must not mutate the converted patch");
+}
+
 } // namespace
 
 int main() {
@@ -104,6 +136,7 @@ int main() {
         convertedAudioIsFinite();
         loadSysexClearsConversion();
         convertIsDeterministic();
+        loadPatchUpdatesConvertedPatchWithoutTouchingSource();
     } catch (const std::exception& exception) {
         std::cerr << exception.what() << '\n';
         return 1;

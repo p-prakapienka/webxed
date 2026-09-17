@@ -125,6 +125,7 @@ if(EMSCRIPTEN)
     configure_file(src/web/PatchBrowser.js "${WEB_OUTPUT_DIR}/PatchBrowser.js" COPYONLY)
     configure_file(src/web/SysexLoader.js "${WEB_OUTPUT_DIR}/SysexLoader.js" COPYONLY)
     configure_file(src/web/ConversionPanel.js "${WEB_OUTPUT_DIR}/ConversionPanel.js" COPYONLY)
+    configure_file(src/web/DigitoneEditor.js "${WEB_OUTPUT_DIR}/DigitoneEditor.js" COPYONLY)
     configure_file(src/web/WebxedApi.js "${WEB_OUTPUT_DIR}/WebxedApi.js" COPYONLY)
 
     set_target_properties(webxed PROPERTIES
@@ -141,6 +142,6 @@ if(EMSCRIPTEN)
         "-sALLOW_MEMORY_GROWTH=1"
         "-sNO_EXIT_RUNTIME=1"
         "-sEXPORTED_RUNTIME_METHODS=['cwrap']"
-        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_selectPreviewEngine','_convert','_conversionJson','_noteOn','_noteOff','_renderSample']"
+        "-sEXPORTED_FUNCTIONS=['_malloc','_free','_createSynth','_destroySynth','_loadSysex','_patchCount','_patchName','_selectPatch','_selectPreviewEngine','_convert','_loadPatch','_conversionJson','_noteOn','_noteOff','_renderSample']"
     )
 endif()
