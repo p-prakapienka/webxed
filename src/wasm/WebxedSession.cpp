@@ -1,6 +1,7 @@
 #include "wasm/WebxedSession.h"
 
 #include "serialization/ConversionSnapshotSerializer.h"
+#include "serialization/digitone/DigitonePatchSerializer.h"
 
 #include <span>
 
@@ -72,6 +73,20 @@ bool WebxedSession::convert() {
     digitoneEngine.loadPatch(conversion.patch);
     digitoneEngine.noteOff();
     return true;
+}
+
+bool WebxedSession::applyDigitoneJson(const char* json) {
+    if (!converted || json == nullptr) {
+        return false;
+    }
+
+    try {
+        conversion.patch = DigitonePatchSerializer().deserialize(json);
+        digitoneEngine.loadPatch(conversion.patch);
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 const char* WebxedSession::getConversionJson() {
